@@ -9,34 +9,71 @@ import (
 	"github.com/rakyll/portmidi"
 )
 
-type Composition interface {
-	HyperMeasure()
-	Measure()
+type Piece interface {
+	Play(*HyperMeasure) error
+	Pause()
+}
+
+// type Composition interface {
+type HyperMeasure interface {
 	Beat()
+	Measure() (*[]byte, error)
+	Composition() (*map[int64][]byte, error)
+}
+
+type BPM interface {
+	Set(int64)
+	Tick(*time.Duration)
 }
 
 type GM258plague struct {
-}
+	Cycles *Cycles
+	Order  map[int64][]byte
+	Tick   []*time.Timer
 
-func (c *GM258plague) HyperMeasure() {
+	// Note
 
-}
+	// CC
 
-func (c *GM258plague) Measure() {
-
-}
-
-func (c *GM258plague) Beat() {
-
-}
-
-type HyperMeasure struct {
+	// Tempo
 }
 
 type Measure struct {
 }
 
 type Beat struct {
+}
+
+func NewGM258plague() *GM258plague {
+	cycles, err := NewCycles()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &GM258plague{
+		Cycles: cycles,
+	}
+}
+
+func (c *GM258plague) Measure() (*[]byte, error) {
+	return nil, nil
+}
+
+func (c *GM258plague) Beat() {
+
+}
+
+func (c *GM258plague) Composition() (*map[int64][]byte, error) {
+	return nil, nil
+}
+
+type piece struct{}
+
+func (c *piece) Play() {
+
+}
+
+func (c *piece) Pause() {
+
 }
 
 type LFODest int64
@@ -192,6 +229,43 @@ const (
 	As7
 	B7
 	C8
+
+	Bf0 Note = As0
+	Df1 Note = Cs1
+	Ef1 Note = Ds1
+	Gf1 Note = Fs1
+	Af1 Note = Gs1
+	Bf1 Note = As1
+	Df2 Note = Cs2
+	Ef2 Note = Ds2
+	Gf2 Note = Fs2
+	Af2 Note = Gs2
+	Bf2 Note = As2
+	Df3 Note = Cs3
+	Ef3 Note = Ds3
+	Gf3 Note = Fs3
+	Af3 Note = Gs3
+	Bf3 Note = As3
+	Df4 Note = Cs4
+	Ef4 Note = Ds4
+	Gf4 Note = Fs4
+	Af4 Note = Gs4
+	Bf4 Note = As4
+	Df5 Note = Cs5
+	Ef5 Note = Ds5
+	Gf5 Note = Fs5
+	Af5 Note = Gs5
+	Bf5 Note = As5
+	Df6 Note = Cs6
+	Ef6 Note = Ds6
+	Gf6 Note = Fs6
+	Af6 Note = Gs6
+	Bf6 Note = As6
+	Df7 Note = Cs7
+	Ef7 Note = Ds7
+	Gf7 Note = Fs7
+	Af7 Note = Gs7
+	Bf7 Note = As7
 )
 
 func (n *Note) Int64() int64 {
@@ -417,20 +491,22 @@ func (c *Cycles) PC(out *portmidi.Stream, track CCtrack, parameter Parameter, va
 }
 
 func main() {
-	cycles, err := NewCycles()
-	if err != nil {
-		log.Fatal(err)
+	// cycles, err := NewCycles()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	composition := NewGM258plague()
+	intro1, _ := Breake(composition)
+
+	composition.Order = map[int64][]byte{
+		1: *intro1,
 	}
 
-	// intro(cycles, 0)
-	// intro(cycles, 1)
-	// intro(cycles, 2)
-	// intro(cycles, 3)
-	// intro(cycles, 4)
+	composition.Composition()
+	// composition.Beat()
 
-	breake(cycles)
-
-	cycles.PM.Close()
+	composition.Cycles.PM.Close()
 	os.Exit(0)
 
 	select {}
