@@ -6,7 +6,7 @@ import (
 	elektron "github.com/bh90210/elektronmodels"
 )
 
-func Intro(p *elektron.Project) (*elektron.Pattern, error) {
+func Intro(p *elektron.Project) *elektron.Pattern {
 	// var klimax []Note = []Note{C1, G1, F1, D1}
 	// var chords []Chord = []Chord{Major6, MajorAdd9, MajorMajor7, MinorMinor9no5, MajorMajor7, MajorMinor9no5, MajorMajor76no5, MinorMinor7}
 
@@ -33,11 +33,10 @@ func Intro(p *elektron.Project) (*elektron.Pattern, error) {
 	// 		)
 	// 	}
 	// }
-
-	p.Patterns[0].Trigs[0].Track = elektron.NewNoteTrack(elektron.T6, time.Duration(100*time.Millisecond))
-	p.Patterns[0].Trigs[0].CC = elektron.NewCC(elektron.CCT6, map[elektron.Parameter]int64{
+	p.Pattern[INTRO].Track[elektron.T1].Trig[0].Note = p.NewNote(elektron.A0, 500, time.Duration(100*time.Millisecond))
+	p.Pattern[INTRO].Track[elektron.T1].Trig[0].CC = p.NewCC(map[elektron.Parameter]int64{
 		elektron.REVERB: 100,
 	})
 
-	return p.Patterns[0], nil
+	return p.Pattern[INTRO]
 }
