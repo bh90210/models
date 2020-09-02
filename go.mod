@@ -1,4 +1,4 @@
-module github.com/bh90210/model-cycles
+module github.com/bh90210/elektronmodels
 
 go 1.14
 
