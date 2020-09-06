@@ -2,32 +2,23 @@ package main
 
 import (
 	"log"
-	"os"
 
-	elektron "github.com/bh90210/elektronmodels"
-)
-
-const (
-	INTRO = 0
+	cycles "github.com/bh90210/elektronmodels"
 )
 
 func main() {
-	gm258plague, err := elektron.NewProject(elektron.CYCLES)
+	gm258plague, err := cycles.NewProject()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer gm258plague.Close()
 
-	intro := Intro(gm258plague)
+	t1intro := Intro()
 
-	patterns := map[int64]*elektron.Pattern{
-		1: intro,
-	}
+	gm258plague.NewPattern(t1intro)
+	gm258plague.NewPattern(t1intro)
 
-	if err := gm258plague.Play(patterns); err != nil {
+	if err := gm258plague.Play(); err != nil {
 		log.Println(err)
 	}
-
-	gm258plague.Close()
-	os.Exit(0)
 }

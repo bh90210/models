@@ -4,10 +4,10 @@ import (
 	"time"
 )
 
-type Track int64
+type track int64
 
 const (
-	T1 Track = iota
+	T1 track = iota
 	T2
 	T3
 	T4
@@ -15,10 +15,29 @@ const (
 	T6
 )
 
-type Notes int64
+type cctrack int64
 
 const (
-	A0 Notes = iota + 21
+	cct1 cctrack = 0xB0
+	cct2 cctrack = 0xB1
+	cct3 cctrack = 0xB2
+	cct4 cctrack = 0xB3
+	cct5 cctrack = 0xB4
+	cct6 cctrack = 0xB5
+)
+
+func (c *cctrack) int64() int64 {
+	return int64(*c)
+}
+
+type cc struct {
+	pamVal map[Parameter]int64
+}
+
+type notes int64
+
+const (
+	A0 notes = iota + 21
 	As0
 	B0
 	C1
@@ -107,52 +126,52 @@ const (
 	B7
 	C8
 
-	Bf0 Notes = As0
-	Df1 Notes = Cs1
-	Ef1 Notes = Ds1
-	Gf1 Notes = Fs1
-	Af1 Notes = Gs1
-	Bf1 Notes = As1
-	Df2 Notes = Cs2
-	Ef2 Notes = Ds2
-	Gf2 Notes = Fs2
-	Af2 Notes = Gs2
-	Bf2 Notes = As2
-	Df3 Notes = Cs3
-	Ef3 Notes = Ds3
-	Gf3 Notes = Fs3
-	Af3 Notes = Gs3
-	Bf3 Notes = As3
-	Df4 Notes = Cs4
-	Ef4 Notes = Ds4
-	Gf4 Notes = Fs4
-	Af4 Notes = Gs4
-	Bf4 Notes = As4
-	Df5 Notes = Cs5
-	Ef5 Notes = Ds5
-	Gf5 Notes = Fs5
-	Af5 Notes = Gs5
-	Bf5 Notes = As5
-	Df6 Notes = Cs6
-	Ef6 Notes = Ds6
-	Gf6 Notes = Fs6
-	Af6 Notes = Gs6
-	Bf6 Notes = As6
-	Df7 Notes = Cs7
-	Ef7 Notes = Ds7
-	Gf7 Notes = Fs7
-	Af7 Notes = Gs7
-	Bf7 Notes = As7
+	Bf0 notes = As0
+	Df1 notes = Cs1
+	Ef1 notes = Ds1
+	Gf1 notes = Fs1
+	Af1 notes = Gs1
+	Bf1 notes = As1
+	Df2 notes = Cs2
+	Ef2 notes = Ds2
+	Gf2 notes = Fs2
+	Af2 notes = Gs2
+	Bf2 notes = As2
+	Df3 notes = Cs3
+	Ef3 notes = Ds3
+	Gf3 notes = Fs3
+	Af3 notes = Gs3
+	Bf3 notes = As3
+	Df4 notes = Cs4
+	Ef4 notes = Ds4
+	Gf4 notes = Fs4
+	Af4 notes = Gs4
+	Bf4 notes = As4
+	Df5 notes = Cs5
+	Ef5 notes = Ds5
+	Gf5 notes = Fs5
+	Af5 notes = Gs5
+	Bf5 notes = As5
+	Df6 notes = Cs6
+	Ef6 notes = Ds6
+	Gf6 notes = Fs6
+	Af6 notes = Gs6
+	Bf6 notes = As6
+	Df7 notes = Cs7
+	Ef7 notes = Ds7
+	Gf7 notes = Fs7
+	Af7 notes = Gs7
+	Bf7 notes = As7
 )
 
-func (n *Notes) Int64() int64 {
+func (n *notes) int64() int64 {
 	return int64(*n)
 }
 
-type Chord int64
+type chord int64
 
 const (
-	Unisonx2 Chord = iota
+	Unisonx2 chord = iota
 	Unisonx3
 	Unisonx4
 	Minor
@@ -192,60 +211,41 @@ const (
 	Fifths
 )
 
-type Note struct {
-	ON  NoteOn
-	OFF NoteOff
-	Dur *time.Duration
-	*CC
+type note struct {
+	on  noteOn
+	off noteOff
+	dur *time.Duration
+	key notes
 }
 
-type NoteOn int64
+type noteOn int64
 
 const (
-	T1ON NoteOn = 0x90
-	T2ON NoteOn = 0x91
-	T3ON NoteOn = 0x92
-	T4ON NoteOn = 0x93
-	T5ON NoteOn = 0x94
-	T6ON NoteOn = 0x95
+	t1on noteOn = 0x90
+	t2on noteOn = 0x91
+	t3on noteOn = 0x92
+	t4on noteOn = 0x93
+	t5on noteOn = 0x94
+	t6on noteOn = 0x95
 )
 
-func (n *NoteOn) Int64() int64 {
+func (n *noteOn) int64() int64 {
 	return int64(*n)
 }
 
-type NoteOff int64
+type noteOff int64
 
 const (
-	T1OFF NoteOff = 0x80
-	T2OFF NoteOff = 0x81
-	T3OFF NoteOff = 0x82
-	T4OFF NoteOff = 0x83
-	T5OFF NoteOff = 0x84
-	T6OFF NoteOff = 0x85
+	t1off noteOff = 0x80
+	t2off noteOff = 0x81
+	t3off noteOff = 0x82
+	t4off noteOff = 0x83
+	t5off noteOff = 0x84
+	t6off noteOff = 0x85
 )
 
-func (n *NoteOff) Int64() int64 {
+func (n *noteOff) int64() int64 {
 	return int64(*n)
-}
-
-type CCtrack int64
-
-const (
-	CCT1 CCtrack = 0xB0
-	CCT2 CCtrack = 0xB1
-	CCT3 CCtrack = 0xB2
-	CCT4 CCtrack = 0xB3
-	CCT5 CCtrack = 0xB4
-	CCT6 CCtrack = 0xB5
-)
-
-func (c *CCtrack) Int64() int64 {
-	return int64(*c)
-}
-
-type CC struct {
-	PamVal map[Parameter]int64
 }
 
 type Parameter int64
@@ -256,10 +256,26 @@ const (
 	MUTE       Parameter = 94
 	PAN        Parameter = 10
 
-	PITCH Parameter = 65
-	DECAY Parameter = 80
-	COLOR Parameter = 16
-	SHAPE Parameter = 17
+	// model:cycles
+	CYCLESPITCH Parameter = 65
+	DECAY       Parameter = 80
+	COLOR       Parameter = 16
+	SHAPE       Parameter = 17
+
+	// model:samples
+	PITCH        Parameter = 16
+	SAMPLESTART  Parameter = 19
+	SAMPLELENGTH Parameter = 20
+	CUTOFF       Parameter = 74
+	RESONANCE    Parameter = 71
+
+	// model:cycles
+	PUNCH Parameter = 66
+	GATE  Parameter = 67
+
+	// model:samples
+	LOOP    Parameter = 17
+	REVERSE Parameter = 18
 
 	SWEEP   Parameter = 18
 	CONTOUR Parameter = 19
@@ -270,9 +286,7 @@ const (
 	SWING      Parameter = 15
 	CHANCE     Parameter = 14
 
-	PUNCH Parameter = 66
-	GATE  Parameter = 67
-
+	// LFO section
 	LFOSPEED      Parameter = 102
 	LFOMULTIPIER  Parameter = 103
 	LFOFADE       Parameter = 104
@@ -282,31 +296,32 @@ const (
 	LFORESET      Parameter = 108
 	LFODEPTH      Parameter = 109
 
+	// FX section
 	DELAYTIME     Parameter = 85
 	DELAYFEEDBACK Parameter = 86
 	REVERBZISE    Parameter = 87
 	REBERBTONE    Parameter = 88
 )
 
-func (p *Parameter) Int64() int64 {
+func (p *Parameter) int64() int64 {
 	return int64(*p)
 }
 
-type LFODest int64
+type lfoDest int64
 
 const (
-	LNONE    LFODest = 0
-	LPITCH   LFODest = 9
-	LCOLOR   LFODest = 11
-	LSHAPE   LFODest = 12
-	LSWEEP   LFODest = 13
-	LCONTOUR LFODest = 14
-	LPAW     LFODest = 15
-	LGATE    LFODest = 16
-	LFTUN    LFODest = 17
-	LDECAY   LFODest = 18
-	LDIST    LFODest = 19
-	LDELAY   LFODest = 20
-	LREVERB  LFODest = 21
-	LPAN     LFODest = 22
+	LNONE    lfoDest = 0
+	LPITCH   lfoDest = 9
+	LCOLOR   lfoDest = 11
+	LSHAPE   lfoDest = 12
+	LSWEEP   lfoDest = 13
+	LCONTOUR lfoDest = 14
+	LPAW     lfoDest = 15
+	LGATE    lfoDest = 16
+	LFTUN    lfoDest = 17
+	LDECAY   lfoDest = 18
+	LDIST    lfoDest = 19
+	LDELAY   lfoDest = 20
+	LREVERB  lfoDest = 21
+	LPAN     lfoDest = 22
 )
