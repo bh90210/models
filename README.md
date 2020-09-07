@@ -2,7 +2,7 @@
 
 # elektron:models
 
-A midi wrapper around elektron's model:cycles & model:samples written in Go.
+A small library that allows you to intercat with elektron's model:cycles & model:samples via midi written in Go.
 
 ## Prerequisites
 
