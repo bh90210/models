@@ -310,18 +310,19 @@ func (p *Parameter) int64() int64 {
 type lfoDest int64
 
 const (
-	LNONE    lfoDest = 0
-	LPITCH   lfoDest = 9
-	LCOLOR   lfoDest = 11
-	LSHAPE   lfoDest = 12
-	LSWEEP   lfoDest = 13
-	LCONTOUR lfoDest = 14
-	LPAW     lfoDest = 15
-	LGATE    lfoDest = 16
-	LFTUN    lfoDest = 17
-	LDECAY   lfoDest = 18
-	LDIST    lfoDest = 19
-	LDELAY   lfoDest = 20
-	LREVERB  lfoDest = 21
-	LPAN     lfoDest = 22
+	LNONE  lfoDest = 0
+	LPITCH lfoDest = 9
+
+	LCOLOR lfoDest = iota + 9
+	LSHAPE
+	LSWEEP
+	LCONTOUR
+	LPAW
+	LGATE
+	LFTUN
+	LDECAY
+	LDIST
+	LDELAY
+	LREVERB
+	LPAN
 )
