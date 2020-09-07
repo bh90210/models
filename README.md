@@ -12,7 +12,7 @@ A midi wrapper around elektron's model:cycles & model:samples written in Go.
 
 ## Usage
 
-complete examples can be found under examples folder_
+_complete examples can be found under [examples](https://github.com/bh90210/elektronmodels/tree/master/examples/) folder_
 
 ```go
 package main
