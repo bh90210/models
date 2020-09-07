@@ -1,3 +1,5 @@
+<img src="https://www.elektron.se/wp-content/uploads/2020/03/ModelCycles_Above_2400.png " alt="drawing" width="350"/> <img src="https://images-na.ssl-images-amazon.com/images/I/91mGXDflYmL._AC_SL1500_.jpg" alt="drawing" width="350"/>
+
 # elektron:models
 
 A midi wrapper around elektron's model:cycles & model:samples written in Go.
