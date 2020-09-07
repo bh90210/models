@@ -6,9 +6,13 @@ A midi wrapper around elektron's model:cycles & model:samples written in Go.
 
 ## Prerequisites
 
+### Go
+
 ### Portmidi
 
 ## Usage
+
+complete examples can be found under examples folder_
 
 ```go
 package main
