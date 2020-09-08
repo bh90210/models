@@ -1,4 +1,4 @@
-<img src="https://www.elektron.se/wp-content/uploads/2020/03/ModelCycles_Above_2400.png " alt="drawing" width="350"/> <img src="https://images-na.ssl-images-amazon.com/images/I/91mGXDflYmL._AC_SL1500_.jpg" alt="drawing" width="350"/>
+<img src="https://i.imgur.com/omIKbjp.jpg" alt="drawing" width="350"/> <img src="https://i.imgur.com/pJbgSUh.png" alt="drawing" width="350"/>
 
 # elektron:models
 
@@ -13,6 +13,13 @@ A small library that allows you to interact with elektron's model:cycles & model
 ## Usage
 
 _complete examples can be found under [examples](https://github.com/bh90210/elektronmodels/tree/master/examples/) folder_
+
+If you haven't already, download either cycles/samples manual from elektron's website.
+The relevant part for this library will be the `APPENDIX A: MIDI SPECIFICATIONS` on both.
+
+<img src="https://i.imgur.com/Yrs6YS3.png" alt="drawing" width="350"/> <img src="https://i.imgur.com/cmil9NG.png" alt="drawing" width="350"/>
+
+#### Quick use
 
 ```go
 package main
@@ -74,3 +81,5 @@ func Intro() *cycles.Track {
 }
 
 ```
+
+#### Pattern system explained
