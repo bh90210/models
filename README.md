@@ -84,4 +84,4 @@ func Intro() *cycles.Track {
 
 #### Pattern system explained
 
-#### Timming system explained
+#### Timing system explained
