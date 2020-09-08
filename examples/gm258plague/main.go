@@ -13,11 +13,11 @@ func main() {
 	}
 	defer gm258plague.Close()
 
-	t1intro := Intro()
-	t2intro := Intro2()
+	t6intro := Intro()
+	// t5intro := Intro2()
 
-	gm258plague.NewPattern(t1intro)
-	gm258plague.NewPattern(t1intro, t2intro)
+	gm258plague.Pattern(t6intro)
+	// gm258plague.NewPattern(t6intro, t5intro)
 
 	gm258plague.Loop()
 	if err := gm258plague.Play(); err != nil {
