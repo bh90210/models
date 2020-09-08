@@ -8,7 +8,12 @@ A small library that allows you to interact with elektron's model:cycles & model
 
 ### Go
 
+The best place for installing Go instructions is https://golang.org/doc/install
+
 ### Portmidi
+
+Depending on your platform your mileage may vary. I had to build from source to make it work (Ubuntu Focal Fossa). 
+Your best chances of finding useful isntructions would be https://sourceforge.net/p/portmedia/wiki/portmidi/
 
 ## Usage
 
@@ -19,7 +24,7 @@ The relevant part for this library will be the `APPENDIX A: MIDI SPECIFICATIONS`
 
 <img src="https://i.imgur.com/Yrs6YS3.png" alt="drawing" width="350"/> <img src="https://i.imgur.com/cmil9NG.png" alt="drawing" width="350"/>
 
-#### Quick use
+### Quick use
 
 ```go
 package main
@@ -82,6 +87,6 @@ func Intro() *cycles.Track {
 
 ```
 
-#### Pattern system explained
+### Pattern system explained
 
-#### Timing system explained
+### Timing system explained
