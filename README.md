@@ -8,7 +8,7 @@ A small library that allows you to interact with [elektron](https://www.elektron
 
 ### Go
 
-The best place for installing Go instructions is https://golang.org/doc/install
+Install Go https://golang.org/doc/install
 
 ## Usage
 
