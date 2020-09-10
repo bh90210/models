@@ -10,11 +10,6 @@ A small library that allows you to interact with [elektron](https://www.elektron
 
 The best place for installing Go instructions is https://golang.org/doc/install
 
-### Portmidi
-
-Depending on your platform your mileage may vary. I had to build from source to make it work (Ubuntu Focal Fossa). 
-Your best chances of finding useful isntructions would be https://sourceforge.net/p/portmedia/wiki/portmidi/
-
 ## Usage
 
 _complete examples can be found under [examples](https://github.com/bh90210/elektronmodels/tree/master/examples/) folder_
