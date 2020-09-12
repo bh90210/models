@@ -13,10 +13,10 @@ func main() {
 	}
 	defer gm258plague.Close()
 
-	t6intro := Intro()
+	t1intro := Intro()
 	// t5intro := Intro2()
 
-	gm258plague.Pattern(t6intro)
+	gm258plague.Pattern(t1intro)
 	// gm258plague.NewPattern(t6intro, t5intro)
 
 	gm258plague.Loop()

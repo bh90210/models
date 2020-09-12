@@ -6,14 +6,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rakyll/portmidi"
+	"gitlab.com/gomidi/midi"
+	"gitlab.com/gomidi/midi/writer"
+	driver "gitlab.com/gomidi/rtmididrv"
 )
 
 //
 // Mapping
 //
 
-type track int64
+type track uint8
 
 const (
 	T1 track = iota
@@ -24,7 +26,7 @@ const (
 	T6
 )
 
-type cctrack int64
+type cctrack uint8
 
 const (
 	cct1 cctrack = 0xB0
@@ -35,15 +37,15 @@ const (
 	cct6 cctrack = 0xB5
 )
 
-func (c *cctrack) int64() int64 {
-	return int64(*c)
-}
+// func (c *cctrack) int64() int64 {
+// 	return int64(*c)
+// }
 
 type cc struct {
-	pamVal map[Parameter]int64
+	pamVal map[Parameter]uint8
 }
 
-type notes int64
+type notes uint8
 
 const (
 	A0 notes = iota + 21
@@ -173,11 +175,11 @@ const (
 	Bf7 notes = As7
 )
 
-func (n *notes) int64() int64 {
-	return int64(*n)
-}
+// func (n *notes) int64() int64 {
+// 	return int64(*n)
+// }
 
-type chord int64
+type chord uint8
 
 const (
 	Unisonx2 chord = iota
@@ -227,7 +229,7 @@ type note struct {
 	key notes
 }
 
-type noteOn int64
+type noteOn uint8
 
 const (
 	t1on noteOn = 0x90
@@ -238,11 +240,11 @@ const (
 	t6on noteOn = 0x95
 )
 
-func (n *noteOn) int64() int64 {
-	return int64(*n)
-}
+// func (n *noteOn) int64() int64 {
+// 	return int64(*n)
+// }
 
-type noteOff int64
+type noteOff uint8
 
 const (
 	t1off noteOff = 0x80
@@ -253,11 +255,11 @@ const (
 	t6off noteOff = 0x85
 )
 
-func (n *noteOff) int64() int64 {
-	return int64(*n)
-}
+// func (n *noteOff) int64() int64 {
+// 	return int64(*n)
+// }
 
-type Parameter int64
+type Parameter uint8
 
 const (
 	NOTE       Parameter = 3
@@ -312,11 +314,11 @@ const (
 	REBERBTONE    Parameter = 88
 )
 
-func (p *Parameter) int64() int64 {
-	return int64(*p)
-}
+// func (p *Parameter) int64() int64 {
+// 	return int64(*p)
+// }
 
-type lfoDest int64
+type lfoDest uint8
 
 const (
 	LNONE  lfoDest = 0
@@ -344,22 +346,22 @@ type Trig struct {
 	track
 	note
 	cctrack
-	level int64
+	level uint8
 	dur   *time.Duration
 	*cc
-	beat     int64
+	beat     uint8
 	lastBeat bool
 	hasCC    bool
 	hasNote  bool
 }
 
-func NewTrig(beat int64) *Trig {
+func NewTrig(beat uint8) *Trig {
 	return &Trig{
 		beat: beat,
 	}
 }
 
-func LastTrig(beat int64) *Trig {
+func LastTrig(beat uint8) *Trig {
 	trig := Trig{
 		beat:     beat,
 		lastBeat: true,
@@ -367,7 +369,7 @@ func LastTrig(beat int64) *Trig {
 	return &trig
 }
 
-func (t *Trig) Note(key notes, level int64, dur time.Duration) {
+func (t *Trig) Note(key notes, level uint8, dur time.Duration) {
 	tn := &note{}
 	tn.key = key
 	tn.dur = &dur
@@ -377,7 +379,7 @@ func (t *Trig) Note(key notes, level int64, dur time.Duration) {
 	t.hasNote = true
 }
 
-func (t *Trig) CC(values map[Parameter]int64) {
+func (t *Trig) CC(values map[Parameter]uint8) {
 	t.cc = &cc{
 		pamVal: values,
 	}
@@ -438,21 +440,53 @@ type pattern struct {
 
 type Project struct {
 	pattern []*pattern
-	pm      *portmidi.Stream
-	mu      *sync.Mutex
-	loop    bool
+
+	drv midi.Driver
+	mu  *sync.Mutex
+
+	inPorts  map[int]midi.In
+	outPorts map[int]midi.Out
+
+	wr *writer.Writer
+
+	loop bool
 }
 
 func NewProject() (*Project, error) {
-	pm, mu, err := newportmidi()
+	drv, mu, err := newmidi()
 	if err != nil {
 		return nil, err
 	}
 
 	project := &Project{
-		pm: pm,
-		mu: mu,
+		drv: &drv,
+		mu:  mu,
 	}
+
+	ii := make(map[int]midi.In)
+	oo := make(map[int]midi.Out)
+
+	mu.Lock()
+	ins, _ := drv.Ins()
+	for i, in := range ins {
+		ii[i] = in
+	}
+
+	outs, _ := drv.Outs()
+	for i, out := range outs {
+		oo[i] = out
+	}
+
+	project.inPorts = ii
+	project.outPorts = oo
+
+	project.outPorts[2].Open()
+	// outs[2].Open()
+	wr := writer.New(project.outPorts[2])
+	fmt.Println(outs[2])
+	project.wr = wr
+	mu.Unlock()
+
 	return project, nil
 }
 
@@ -533,11 +567,11 @@ func (p *Project) Play() error {
 				// total trigs for current beat range
 				for _, trig := range totalTrigsForBeat {
 					if trig.hasCC == true {
-						p.cc(trig.cctrack, trig.cc.pamVal)
+						p.cc(&trig.track, &trig.cctrack, trig.cc.pamVal)
 					}
 
 					if trig.hasNote == true {
-						p.note(&trig.note, trig.note.key, trig.level)
+						p.note(&trig.track, &trig.note, trig.note.key, trig.level)
 					}
 				}
 
@@ -560,8 +594,8 @@ func (p *Project) Play() error {
 func (c *Project) Pause() {
 }
 
-func (c *Project) Close() {
-	c.pm.Close()
+func (p *Project) Close() {
+	p.drv.Close()
 }
 
 func (t *Project) Pattern(variadicTracks ...*Track) {
@@ -572,12 +606,17 @@ func (t *Project) Pattern(variadicTracks ...*Track) {
 	t.pattern = append(t.pattern, pattern)
 }
 
-func (c *Project) note(track *note, note notes, intensity int64) {
-	timer := time.NewTimer(*track.dur)
-
+func (c *Project) note(track *track, note *note, key notes, velocity uint8) {
+	timer := time.NewTimer(*note.dur)
 	// note on
 	c.mu.Lock()
-	c.pm.WriteShort(track.on.int64(), note.int64(), intensity)
+	c.wr.SetChannel(uint8(*track))
+	writer.NoteOn(c.wr, 60, 100)
+	time.Sleep(time.Millisecond * 800)
+	writer.NoteOff(c.wr, 60)
+	fmt.Println(uint8(key), uint8(*track), velocity, "<<<<<<<<<<<<<<<<<<")
+	writer.NoteOn(c.wr, uint8(key), velocity)
+	// c.pm.WriteShort(track.on.int64(), note.int64(), intensity)
 	c.mu.Unlock()
 
 	go func() {
@@ -585,15 +624,21 @@ func (c *Project) note(track *note, note notes, intensity int64) {
 
 		// note off
 		c.mu.Lock()
-		c.pm.WriteShort(track.off.int64(), note.int64(), intensity)
+		writer.NoteOff(c.wr, uint8(key))
+		// c.pm.WriteShort(track.off.int64(), note.int64(), intensity)
 		c.mu.Unlock()
 	}()
 }
 
-func (c *Project) cc(track cctrack, ccvalues map[Parameter]int64) {
+func (c *Project) cc(track *track, cctrack *cctrack, ccvalues map[Parameter]uint8) {
+	wr := writer.New(c.outPorts[2])
+
 	for k, v := range ccvalues {
 		c.mu.Lock()
-		c.pm.WriteShort(track.int64(), k.int64(), v)
+		wr.SetChannel(uint8(*track))
+		writer.ControlChange(c.wr, uint8(k), v)
+		// writer.CcOn(wr, uint8(k))
+		// c.pm.WriteShort(track.int64(), k.int64(), v)
 		c.mu.Unlock()
 	}
 }
@@ -601,14 +646,16 @@ func (c *Project) cc(track cctrack, ccvalues map[Parameter]int64) {
 // func (c *Cycles) pc(out *portmidi.Stream, track CCtrack, parameter Parameter, value int64) {
 // }
 
-func newportmidi() (*portmidi.Stream, *sync.Mutex, error) {
-	out, err := portmidi.NewOutputStream(portmidi.DefaultOutputDeviceID(), 1024, 0)
+func newmidi() (driver.Driver, *sync.Mutex, error) {
+	var err error
+	drv, err := driver.New()
 	if err != nil {
-		return nil, nil, err
+		panic("can't initialize driver")
 	}
+
 	mutex := &sync.Mutex{}
 
-	return out, mutex, nil
+	return *drv, mutex, nil
 }
 
 //
