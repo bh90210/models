@@ -480,10 +480,11 @@ func NewProject() (*Project, error) {
 	project.inPorts = ii
 	project.outPorts = oo
 
+	// TODO: FIX THIS MESS
 	project.outPorts[2].Open()
-	// outs[2].Open()
+
 	wr := writer.New(project.outPorts[2])
-	fmt.Println(outs[2])
+
 	project.wr = wr
 	mu.Unlock()
 
@@ -611,21 +612,14 @@ func (c *Project) note(track *track, note *note, key notes, velocity uint8) {
 	// note on
 	c.mu.Lock()
 	c.wr.SetChannel(uint8(*track))
-	writer.NoteOn(c.wr, 60, 100)
-	time.Sleep(time.Millisecond * 800)
-	writer.NoteOff(c.wr, 60)
-	fmt.Println(uint8(key), uint8(*track), velocity, "<<<<<<<<<<<<<<<<<<")
 	writer.NoteOn(c.wr, uint8(key), velocity)
-	// c.pm.WriteShort(track.on.int64(), note.int64(), intensity)
 	c.mu.Unlock()
 
 	go func() {
 		<-timer.C
-
 		// note off
 		c.mu.Lock()
 		writer.NoteOff(c.wr, uint8(key))
-		// c.pm.WriteShort(track.off.int64(), note.int64(), intensity)
 		c.mu.Unlock()
 	}()
 }
@@ -637,8 +631,6 @@ func (c *Project) cc(track *track, cctrack *cctrack, ccvalues map[Parameter]uint
 		c.mu.Lock()
 		wr.SetChannel(uint8(*track))
 		writer.ControlChange(c.wr, uint8(k), v)
-		// writer.CcOn(wr, uint8(k))
-		// c.pm.WriteShort(track.int64(), k.int64(), v)
 		c.mu.Unlock()
 	}
 }
