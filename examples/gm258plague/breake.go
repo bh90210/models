@@ -7,60 +7,48 @@ import (
 )
 
 func Intro() *e.Track {
-	trig := e.NewTrig(0)
-	// trig.CC(
-	// 	map[e.Parameter]uint8{
-	// 		// e.NOTE:   uint8(e.A4),
-	// 		e.REBERBTONE:   80,
-	// 		e.REVERBZISE:   80,
-	// 		e.DELAY:        0,
-	// 		e.DECAY:        50,
-	// 		e.SHAPE:        uint8(5),
-	// 		e.SWEEP:        10,
-	// 		e.CHANCE:       0,
-	// 		e.SWING:        0,
-	// 		e.GATE:         0,
-	// 		e.DELAYTIME:    10,
-	// 		e.COLOR:        120,
-	// 		e.LFODEST:      uint8(0),
-	// 		e.LFOWAVEFORM:  0,
-	// 		e.LFOMULTIPIER: 0,
-	// 		e.LFODEPTH:     0,
-	// 		e.VOLUMEDIST:   0,
-	// 	})
-	trig.Note(
-		e.A3,
-		100,
-		time.Duration(100*time.Millisecond))
-
-	trig2 := e.NewTrig(2)
-	// trig2.CC(
-	// 	map[e.Parameter]uint8{
-	// 		e.REBERBTONE:   0,
-	// 		e.REVERBZISE:   0,
-	// 		e.DELAY:        0,
-	// 		e.DECAY:        50,
-	// 		e.SHAPE:        uint8(5),
-	// 		e.SWEEP:        10,
-	// 		e.CHANCE:       0,
-	// 		e.SWING:        0,
-	// 		e.GATE:         0,
-	// 		e.DELAYTIME:    10,
-	// 		e.COLOR:        120,
-	// 		e.LFODEST:      uint8(0),
-	// 		e.LFOWAVEFORM:  0,
-	// 		e.LFOMULTIPIER: 0,
-	// 		e.LFODEPTH:     0,
-	// 		e.VOLUMEDIST:   0,
-	// 	})
-	trig2.Note(
-		e.A4,
-		100,
-		time.Duration(100*time.Millisecond))
-
-	endTrig := e.LastTrig(4)
-
-	track1 := e.NewTrack(e.T1, trig, trig2, endTrig)
+	var te []*e.Trig
+	var it int
+loop:
+	for {
+		trig := e.NewTrig(uint8(it))
+		trig.CC(
+			map[e.Parameter]uint8{
+				// e.NOTE:         uint8(it),
+				// e.CPITCH:       uint8(it),
+				// e.PAN:          uint8(it),
+				e.CONTOUR:      uint8(it),
+				e.REVERB:       uint8(it),
+				e.REBERBTONE:   80,
+				e.REVERBZISE:   80,
+				e.DELAY:        uint8(it),
+				e.DECAY:        uint8(it),
+				e.SHAPE:        uint8(it),
+				e.SWEEP:        uint8(it),
+				e.CHANCE:       0,
+				e.SWING:        0,
+				e.GATE:         1,
+				e.DELAYTIME:    uint8(it),
+				e.COLOR:        uint8(it),
+				e.LFODEST:      uint8(it),
+				e.LFOWAVEFORM:  0,
+				e.LFOMULTIPIER: 0,
+				e.LFODEPTH:     uint8(it),
+				e.VOLUMEDIST:   60,
+			})
+		trig.Note(
+			e.A0+uint8(it),
+			100,
+			time.Duration(100*time.Millisecond))
+		te = append(te, trig)
+		if it == 99 {
+			break loop
+		}
+		it++
+	}
+	endTrig := e.LastTrig(uint8(it + 1))
+	te = append(te, endTrig)
+	track1 := e.NewTrack(e.T1, te)
 
 	return track1
 }

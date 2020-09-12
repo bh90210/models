@@ -37,10 +37,6 @@ const (
 	cct6 cctrack = 0xB5
 )
 
-// func (c *cctrack) int64() int64 {
-// 	return int64(*c)
-// }
-
 type cc struct {
 	pamVal map[Parameter]uint8
 }
@@ -48,7 +44,7 @@ type cc struct {
 type notes uint8
 
 const (
-	A0 notes = iota + 21
+	A0 uint8 = iota + 21
 	As0
 	B0
 	C1
@@ -137,47 +133,43 @@ const (
 	B7
 	C8
 
-	Bf0 notes = As0
-	Df1 notes = Cs1
-	Ef1 notes = Ds1
-	Gf1 notes = Fs1
-	Af1 notes = Gs1
-	Bf1 notes = As1
-	Df2 notes = Cs2
-	Ef2 notes = Ds2
-	Gf2 notes = Fs2
-	Af2 notes = Gs2
-	Bf2 notes = As2
-	Df3 notes = Cs3
-	Ef3 notes = Ds3
-	Gf3 notes = Fs3
-	Af3 notes = Gs3
-	Bf3 notes = As3
-	Df4 notes = Cs4
-	Ef4 notes = Ds4
-	Gf4 notes = Fs4
-	Af4 notes = Gs4
-	Bf4 notes = As4
-	Df5 notes = Cs5
-	Ef5 notes = Ds5
-	Gf5 notes = Fs5
-	Af5 notes = Gs5
-	Bf5 notes = As5
-	Df6 notes = Cs6
-	Ef6 notes = Ds6
-	Gf6 notes = Fs6
-	Af6 notes = Gs6
-	Bf6 notes = As6
-	Df7 notes = Cs7
-	Ef7 notes = Ds7
-	Gf7 notes = Fs7
-	Af7 notes = Gs7
-	Bf7 notes = As7
+	Bf0 uint8 = As0
+	Df1 uint8 = Cs1
+	Ef1 uint8 = Ds1
+	Gf1 uint8 = Fs1
+	Af1 uint8 = Gs1
+	Bf1 uint8 = As1
+	Df2 uint8 = Cs2
+	Ef2 uint8 = Ds2
+	Gf2 uint8 = Fs2
+	Af2 uint8 = Gs2
+	Bf2 uint8 = As2
+	Df3 uint8 = Cs3
+	Ef3 uint8 = Ds3
+	Gf3 uint8 = Fs3
+	Af3 uint8 = Gs3
+	Bf3 uint8 = As3
+	Df4 uint8 = Cs4
+	Ef4 uint8 = Ds4
+	Gf4 uint8 = Fs4
+	Af4 uint8 = Gs4
+	Bf4 uint8 = As4
+	Df5 uint8 = Cs5
+	Ef5 uint8 = Ds5
+	Gf5 uint8 = Fs5
+	Af5 uint8 = Gs5
+	Bf5 uint8 = As5
+	Df6 uint8 = Cs6
+	Ef6 uint8 = Ds6
+	Gf6 uint8 = Fs6
+	Af6 uint8 = Gs6
+	Bf6 uint8 = As6
+	Df7 uint8 = Cs7
+	Ef7 uint8 = Ds7
+	Gf7 uint8 = Fs7
+	Af7 uint8 = Gs7
+	Bf7 uint8 = As7
 )
-
-// func (n *notes) int64() int64 {
-// 	return int64(*n)
-// }
 
 type chord uint8
 
@@ -226,7 +218,7 @@ type note struct {
 	on  noteOn
 	off noteOff
 	dur *time.Duration
-	key notes
+	key uint8
 }
 
 type noteOn uint8
@@ -240,10 +232,6 @@ const (
 	t6on noteOn = 0x95
 )
 
-// func (n *noteOn) int64() int64 {
-// 	return int64(*n)
-// }
-
 type noteOff uint8
 
 const (
@@ -254,10 +242,6 @@ const (
 	t5off noteOff = 0x84
 	t6off noteOff = 0x85
 )
-
-// func (n *noteOff) int64() int64 {
-// 	return int64(*n)
-// }
 
 type Parameter uint8
 
@@ -314,10 +298,6 @@ const (
 	REBERBTONE    Parameter = 88
 )
 
-// func (p *Parameter) int64() int64 {
-// 	return int64(*p)
-// }
-
 type lfoDest uint8
 
 const (
@@ -369,7 +349,7 @@ func LastTrig(beat uint8) *Trig {
 	return &trig
 }
 
-func (t *Trig) Note(key notes, level uint8, dur time.Duration) {
+func (t *Trig) Note(key uint8, level uint8, dur time.Duration) {
 	tn := &note{}
 	tn.key = key
 	tn.dur = &dur
@@ -391,7 +371,7 @@ type Track struct {
 	trig   []*Trig
 }
 
-func NewTrack(trackNumber track, variadicTracks ...*Trig) *Track {
+func NewTrack(trackNumber track, variadicTracks []*Trig) *Track {
 	for _, v := range variadicTracks {
 		switch trackNumber {
 		case T1:
@@ -607,29 +587,27 @@ func (t *Project) Pattern(variadicTracks ...*Track) {
 	t.pattern = append(t.pattern, pattern)
 }
 
-func (c *Project) note(track *track, note *note, key notes, velocity uint8) {
+func (c *Project) note(track *track, note *note, key uint8, velocity uint8) {
 	timer := time.NewTimer(*note.dur)
 	// note on
 	c.mu.Lock()
 	c.wr.SetChannel(uint8(*track))
-	writer.NoteOn(c.wr, uint8(key), velocity)
+	writer.NoteOn(c.wr, key, velocity)
 	c.mu.Unlock()
 
 	go func() {
 		<-timer.C
 		// note off
 		c.mu.Lock()
-		writer.NoteOff(c.wr, uint8(key))
+		writer.NoteOff(c.wr, key)
 		c.mu.Unlock()
 	}()
 }
 
 func (c *Project) cc(track *track, cctrack *cctrack, ccvalues map[Parameter]uint8) {
-	wr := writer.New(c.outPorts[2])
-
 	for k, v := range ccvalues {
 		c.mu.Lock()
-		wr.SetChannel(uint8(*track))
+		c.wr.SetChannel(uint8(*track))
 		writer.ControlChange(c.wr, uint8(k), v)
 		c.mu.Unlock()
 	}
