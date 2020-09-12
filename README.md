@@ -2,25 +2,20 @@
 
 # elektron:models
 
-A small library that allows you to interact with elektron's model:cycles & model:samples via midi written in Go.
+A small library that allows you to interact with [elektron](https://www.elektron.se/)'s **model:cycles** & **model:samples** via midi written in Go.
 
 ## Prerequisites
 
 ### Go
 
-The best place for installing Go instructions is https://golang.org/doc/install
-
-### Portmidi
-
-Depending on your platform your mileage may vary. I had to build from source to make it work (Ubuntu Focal Fossa). 
-Your best chances of finding useful isntructions would be https://sourceforge.net/p/portmedia/wiki/portmidi/
+Install Go https://golang.org/doc/install
 
 ## Usage
 
 _complete examples can be found under [examples](https://github.com/bh90210/elektronmodels/tree/master/examples/) folder_
 
 If you haven't already, download either cycles/samples manual from elektron's website.
-The relevant part for this library will be the `APPENDIX A: MIDI SPECIFICATIONS` on both.
+The relevant part for this library is the `APPENDIX A: MIDI SPECIFICATIONS`.
 
 <img src="https://i.imgur.com/Yrs6YS3.png" alt="drawing" width="350"/> <img src="https://i.imgur.com/cmil9NG.png" alt="drawing" width="350"/>
 
