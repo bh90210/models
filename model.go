@@ -41,8 +41,6 @@ type cc struct {
 	pamVal map[Parameter]uint8
 }
 
-type notes uint8
-
 const (
 	A0 uint8 = iota + 21
 	As0
@@ -171,10 +169,8 @@ const (
 	Bf7 uint8 = As7
 )
 
-type chord uint8
-
 const (
-	Unisonx2 chord = iota
+	Unisonx2 uint8 = iota
 	Unisonx3
 	Unisonx4
 	Minor
@@ -215,33 +211,9 @@ const (
 )
 
 type note struct {
-	on  noteOn
-	off noteOff
 	dur *time.Duration
 	key uint8
 }
-
-type noteOn uint8
-
-const (
-	t1on noteOn = 0x90
-	t2on noteOn = 0x91
-	t3on noteOn = 0x92
-	t4on noteOn = 0x93
-	t5on noteOn = 0x94
-	t6on noteOn = 0x95
-)
-
-type noteOff uint8
-
-const (
-	t1off noteOff = 0x80
-	t2off noteOff = 0x81
-	t3off noteOff = 0x82
-	t4off noteOff = 0x83
-	t5off noteOff = 0x84
-	t6off noteOff = 0x85
-)
 
 type Parameter uint8
 
@@ -298,13 +270,11 @@ const (
 	REBERBTONE    Parameter = 88
 )
 
-type lfoDest uint8
-
 const (
-	LNONE  lfoDest = 0
-	LPITCH lfoDest = 9
+	LNONE  uint8 = 0
+	LPITCH uint8 = 9
 
-	LCOLOR lfoDest = iota + 9
+	LCOLOR uint8 = iota + 9
 	LSHAPE
 	LSWEEP
 	LCONTOUR
@@ -376,34 +346,16 @@ func NewTrack(trackNumber track, variadicTracks []*Trig) *Track {
 		switch trackNumber {
 		case T1:
 			v.track = T1
-			v.note.on = t1on
-			v.note.off = t1off
-			v.cctrack = cct1
 		case T2:
 			v.track = T2
-			v.note.on = t2on
-			v.note.off = t2off
-			v.cctrack = cct2
 		case T3:
 			v.track = T3
-			v.note.on = t3on
-			v.note.off = t3off
-			v.cctrack = cct3
 		case T4:
 			v.track = T4
-			v.note.on = t4on
-			v.note.off = t4off
-			v.cctrack = cct4
 		case T5:
 			v.track = T5
-			v.note.on = t5on
-			v.note.off = t5off
-			v.cctrack = cct5
 		case T6:
 			v.track = T6
-			v.note.on = t6on
-			v.note.off = t6off
-			v.cctrack = cct6
 		}
 	}
 	track := Track{
@@ -541,14 +493,16 @@ func (p *Project) Play() error {
 		lastBeat := ends[k]
 		it := 0
 
+		tick := time.NewTicker(2000 * time.Millisecond)
 	loop:
 		for {
+			<-tick.C
 			totalTrigsForBeat := beat[it]
 			if len(totalTrigsForBeat) != 0 {
 				// total trigs for current beat range
 				for _, trig := range totalTrigsForBeat {
 					if trig.hasCC == true {
-						p.cc(&trig.track, &trig.cctrack, trig.cc.pamVal)
+						p.cc(&trig.track, trig.cc.pamVal)
 					}
 
 					if trig.hasNote == true {
@@ -562,9 +516,6 @@ func (p *Project) Play() error {
 			if it == lastBeat-1 {
 				break loop
 			}
-
-			fmt.Println("Sleeping", it)
-			time.Sleep(700 * time.Millisecond)
 			it++
 		}
 	}
@@ -604,7 +555,7 @@ func (c *Project) note(track *track, note *note, key uint8, velocity uint8) {
 	}()
 }
 
-func (c *Project) cc(track *track, cctrack *cctrack, ccvalues map[Parameter]uint8) {
+func (c *Project) cc(track *track, ccvalues map[Parameter]uint8) {
 	for k, v := range ccvalues {
 		c.mu.Lock()
 		c.wr.SetChannel(uint8(*track))
