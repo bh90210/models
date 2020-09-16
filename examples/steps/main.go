@@ -8,27 +8,26 @@ import (
 	cycles "github.com/bh90210/elektronmodels"
 )
 
+type chord struct {
+	note  uint8
+	shape uint8
+	bass  []uint8
+}
+
 var total int = 0
 
-func t1Intro() *cycles.Track {
-	var te []*cycles.Trig
+var (
+	Bmaj7  = chord{note: cycles.B3, shape: cycles.MajorMajor76no5, bass: []uint8{cycles.B0, cycles.Fs1, cycles.As0}}
+	D7     = chord{note: cycles.D4, shape: cycles.MajorMinor7, bass: []uint8{cycles.D1, cycles.A0, cycles.C1}}
+	Gmaj7  = chord{note: cycles.G4, shape: cycles.MajorMajor7, bass: []uint8{cycles.G1, cycles.D1, cycles.A0, cycles.Fs1}}
+	Bb7    = chord{note: cycles.Bf3, shape: cycles.MajorMinor7, bass: []uint8{cycles.Bf0, cycles.F1, cycles.Af1, cycles.C1}}
+	Ebmaj7 = chord{note: cycles.Ef4, shape: cycles.MajorMajor9no5, bass: []uint8{cycles.Ef1, cycles.D1, cycles.F1}}
+	Am7    = chord{note: cycles.A4, shape: cycles.MinorMinor9no5, bass: []uint8{cycles.A0, cycles.E1, cycles.B0}}
+	Fs7    = chord{note: cycles.Fs4, shape: cycles.MajorMinor7, bass: []uint8{cycles.Fs1, cycles.Cs1, cycles.E1, cycles.Gs1}}
+	Csm7   = chord{note: cycles.Cs4, shape: cycles.MinorMinor7Sus4, bass: []uint8{cycles.Cs1, cycles.B0, cycles.Ds1, cycles.As0}}
+	Fm7    = chord{note: cycles.F4, shape: cycles.Minor6, bass: []uint8{cycles.F1, cycles.Af1, cycles.C1, cycles.Ef1, cycles.G1, cycles.D1}}
 
-	type chord struct {
-		note  uint8
-		shape uint8
-	}
-
-	Bmaj7 := chord{note: cycles.B3, shape: cycles.MajorMajor76no5}
-	D7 := chord{note: cycles.D4, shape: cycles.MajorMinor7b9no5}
-	Gmaj7 := chord{note: cycles.G4, shape: cycles.MajorMajor7}
-	Bb7 := chord{note: cycles.Bf3, shape: cycles.MajorMinor7}
-	Ebmaj7 := chord{note: cycles.Ef4, shape: cycles.MajorMajor9no5}
-	Am7 := chord{note: cycles.A4, shape: cycles.MinorMinor9no5}
-	Fs7 := chord{note: cycles.Fs4, shape: cycles.MajorMinor7}
-	Csm7 := chord{note: cycles.Cs4, shape: cycles.MinorMinor7Sus4}
-	Fm7 := chord{note: cycles.F4, shape: cycles.Minor6}
-
-	array := map[int]chord{
+	array = map[int]chord{
 		0:  Bmaj7,
 		1:  D7,
 		2:  Gmaj7,
@@ -62,6 +61,10 @@ func t1Intro() *cycles.Track {
 		30: Csm7,
 		31: Fs7,
 	}
+)
+
+func piano() *cycles.Track {
+	var te []*cycles.Trig
 
 	source := rand.NewSource(666)
 	r1 := rand.New(source)
@@ -98,19 +101,41 @@ func t1Intro() *cycles.Track {
 	return track
 }
 
+func bass() *cycles.Track {
+	var te []*cycles.Trig
+
+	// source := rand.NewSource(666)
+	// r1 := rand.New(source)
+
+	for k, v := range array {
+		trig := cycles.NewTrig(uint8(k))
+		trig.Note(
+			v.bass[rand.Intn(2)],
+			100,
+			time.Duration(4000*time.Millisecond))
+		te = append(te, trig)
+	}
+
+	trig := cycles.LastTrig(uint8(len(array)) + 1)
+	te = append(te, trig)
+
+	track := cycles.NewTrack(cycles.T4, te)
+
+	return track
+}
+
 func main() {
-	gm258plague, err := cycles.NewProject()
+	steps, err := cycles.NewProject()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer gm258plague.Close()
+	defer steps.Close()
 
-	// gm258plague.Pattern(t1Intro(), t2Intro(), t3Intro(), t4Intro(), t5Intro(), t6Intro())
-	gm258plague.Pattern(t1Intro())
-	gm258plague.Pattern(t1Intro())
+	// steps.Pattern(piano())
+	steps.Pattern(piano(), bass())
 
-	gm258plague.Loop()
-	if err := gm258plague.Play(); err != nil {
+	steps.Loop()
+	if err := steps.Play(); err != nil {
 		log.Println(err)
 	}
 
