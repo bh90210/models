@@ -17,6 +17,8 @@ type chord struct {
 var total int = 0
 
 var (
+	// 1-3-5 7-9-11-13
+	// 5
 	Bmaj7  = chord{note: cycles.B3, shape: cycles.MajorMajor76no5, bass: []uint8{cycles.B0, cycles.Fs1, cycles.As0}}
 	D7     = chord{note: cycles.D4, shape: cycles.MajorMinor7, bass: []uint8{cycles.D1, cycles.A0, cycles.C1}}
 	Gmaj7  = chord{note: cycles.G4, shape: cycles.MajorMajor7, bass: []uint8{cycles.G1, cycles.D1, cycles.A0, cycles.Fs1}}

@@ -391,7 +391,7 @@ func NewProject() (*Project, error) {
 	}
 
 	project := &Project{
-		drv: &drv,
+		drv: drv,
 		mu:  mu,
 	}
 
@@ -485,14 +485,11 @@ func (p *Project) Play() error {
 	// range over timeline (map)
 	// each iteration return song's individual patterns in order
 	for k, pattern := range timlin {
-		// var pat represents a single pattern (NewPattern())
-		// beat := *pattern
 		beat := *pattern
 
 		// loop over patterns' trigs (beats) until ends[pattern]longestBeat
 		lastBeat := ends[k]
 		it := 0
-
 		tick := time.NewTicker(2000 * time.Millisecond)
 	loop:
 		for {
@@ -567,7 +564,7 @@ func (c *Project) cc(track *track, ccvalues map[Parameter]uint8) {
 // func (c *Cycles) pc(out *portmidi.Stream, track CCtrack, parameter Parameter, value int64) {
 // }
 
-func newmidi() (driver.Driver, *sync.Mutex, error) {
+func newmidi() (*driver.Driver, *sync.Mutex, error) {
 	var err error
 	drv, err := driver.New()
 	if err != nil {
@@ -576,7 +573,7 @@ func newmidi() (driver.Driver, *sync.Mutex, error) {
 
 	mutex := &sync.Mutex{}
 
-	return *drv, mutex, nil
+	return drv, mutex, nil
 }
 
 //
