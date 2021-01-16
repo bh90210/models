@@ -13,7 +13,7 @@ func main() {
 
 	t1intro := Intro()
 
-	example.Pattern(t1intro)
+	example.Pattern(t1intro, t1intro)
 	example.Loop()
 
 	if err := example.Play(); err != nil {
@@ -25,7 +25,7 @@ func Intro() *cycles.Track {
 	trig := cycles.NewTrig(0)
 	trig.CC(
 		map[cycles.Parameter]uint8{
-			// e.NOTE:   int64(e.A4),
+			cycles.NOTE:         cycles.A4,
 			cycles.REBERBTONE:   80,
 			cycles.REVERBZISE:   80,
 			cycles.DELAY:        0,
@@ -47,10 +47,10 @@ func Intro() *cycles.Track {
 		120,
 		time.Duration(100*time.Millisecond))
 
-	endTrig := cycles.LastTrig(10)
+	endTrig := cycles.LastTrig(2)
 
 	var trigs []*cycles.Trig
-	trigs = append(trigs, trig, trig, trig, trig, trig, endTrig)
+	trigs = append(trigs, trig, endTrig)
 
 	track1 := cycles.NewTrack(cycles.T1, trigs)
 

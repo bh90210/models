@@ -14,8 +14,7 @@ Install Go https://golang.org/doc/install
 
 ### RtMidi
 
-For Ubuntu 20.04+ run `apt install librtmidi4 librtmidi-dev`
-For older versions take a look [here](https://launchpad.net/ubuntu/+source/rtmidi).
+For Ubuntu 20.04+ run `apt install librtmidi4 librtmidi-dev`. For older versions take a look [here](https://launchpad.net/ubuntu/+source/rtmidi).
 
 Instructions for other operating systems coming soon.
 
@@ -23,7 +22,7 @@ Instructions for other operating systems coming soon.
 
 _complete examples can be found under [examples](https://github.com/bh90210/elektronmodels/tree/master/examples/) folder_
 
-If you haven't already, download either cycles/samples manual from elektron's website.
+If you haven't already, download cycles/samples manuals from elektron's website.
 The relevant part for this library is the `APPENDIX A: MIDI SPECIFICATIONS`.
 
 <img src="https://i.imgur.com/Yrs6YS3.png" alt="drawing" width="350"/> <img src="https://i.imgur.com/cmil9NG.png" alt="drawing" width="350"/>
@@ -58,7 +57,7 @@ func Intro() *cycles.Track {
 	trig := cycles.NewTrig(0)
 	trig.CC(
 		map[cycles.Parameter]uint8{
-			// e.NOTE:   int64(e.A4),
+			cycles.NOTE:         cycles.A4,
 			cycles.REBERBTONE:   80,
 			cycles.REVERBZISE:   80,
 			cycles.DELAY:        0,
