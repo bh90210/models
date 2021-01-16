@@ -30,6 +30,7 @@ The relevant part for this library is the `APPENDIX A: MIDI SPECIFICATIONS`.
 
 ### Quick use
 
+Cycles example: 
 ```go
 package main
 
@@ -40,51 +41,51 @@ import (
 )
 
 func main() {
-	gm258plague, err := cycles.NewProject()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer gm258plague.Close()
+	example, _ := cycles.NewProject()
+	defer example.Close()
 
 	t1intro := Intro()
 
-	gm258plague.NewPattern(t1intro)
+	example.Pattern(t1intro)
+	example.Loop()
 
-	gm258plague.Loop()
-	if err := gm258plague.Play(); err != nil {
+	if err := example.Play(); err != nil {
 		log.Println(err)
 	}
 }
 
 func Intro() *cycles.Track {
-	trig := e.NewTrig(0)
+	trig := cycles.NewTrig(0)
 	trig.CC(
-		map[e.Parameter]int64{
+		map[cycles.Parameter]uint8{
 			// e.NOTE:   int64(e.A4),
-			e.REBERBTONE:   80,
-			e.REVERBZISE:   80,
-			e.DELAY:        0,
-			e.DECAY:        50,
-			e.SHAPE:        int64(5),
-			e.SWEEP:        10,
-			e.CHANCE:       0,
-			e.SWING:        0,
-			e.GATE:         0,
-			e.DELAYTIME:    10,
-			e.COLOR:        120,
-			e.LFODEST:      int64(0),
-			e.LFOWAVEFORM:  0,
-			e.LFOMULTIPIER: 0,
-			e.LFODEPTH:     0,
+			cycles.REBERBTONE:   80,
+			cycles.REVERBZISE:   80,
+			cycles.DELAY:        0,
+			cycles.DECAY:        50,
+			cycles.SHAPE:        5,
+			cycles.SWEEP:        10,
+			cycles.CHANCE:       0,
+			cycles.SWING:        0,
+			cycles.GATE:         0,
+			cycles.DELAYTIME:    10,
+			cycles.COLOR:        120,
+			cycles.LFODEST:      0,
+			cycles.LFOWAVEFORM:  0,
+			cycles.LFOMULTIPIER: 0,
+			cycles.LFODEPTH:     0,
 		})
 	trig.Note(
-		e.A4,
+		cycles.A4,
 		120,
 		time.Duration(100*time.Millisecond))
 
-	endTrig := e.LastTrig(2)
+	endTrig := cycles.LastTrig(2)
 
-	track1 := e.NewTrack(e.T1, trig, endTrig)
+	var trigs []*cycles.Trig
+	trigs = append(trigs, trig, endTrig)
+
+	track1 := cycles.NewTrack(cycles.T1, trigs)
 
 	return track1
 }
