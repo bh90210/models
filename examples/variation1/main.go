@@ -1,7 +1,9 @@
+// package variation1 demonstrates that rtmidi is indeed working, this is a very streamlined example, for full examples see variation2,3,4...
 package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -32,31 +34,69 @@ func main() {
 	// make sure to close all open ports at the end
 	defer drv.Close()
 
-	var ww = make(chan int, 10)
+	var block = make(chan int, 10)
 
-	go func() {
-		for {
-			go checkPorts()
-			time.Sleep(time.Second * 1)
-		}
-	}()
+	go checkPorts()
 
 	// interrupt with ctrl+c
-	<-ww
+	<-block
 }
 
 func greet(out midi.Out) {
 	out.Open()
-	wr := writer.New(out)
-	writer.NoteOn(wr, 60, 100)
-	time.Sleep(time.Millisecond * 100)
-	writer.NoteOff(wr, 60)
-	time.Sleep(time.Millisecond * 100)
-	wr.SetChannel(1)
-	writer.NoteOn(wr, 70, 100)
-	time.Sleep(time.Millisecond * 100)
-	writer.NoteOff(wr, 70)
-	time.Sleep(time.Second * 5)
+
+	started := time.Now()
+	var ended time.Time
+
+	// INTRO
+	for loop := 0; loop <= 600; loop = loop + 2 {
+		wr := writer.New(out)
+
+		go func() {
+			// kick
+			writer.NoteOn(wr, 60, 100)
+			time.Sleep(time.Millisecond * 10)
+			writer.NoteOff(wr, 60)
+
+			// perc
+			wr.SetChannel(3)
+			writer.NoteOn(wr, 70, 100)
+			time.Sleep(time.Millisecond * 5)
+			writer.NoteOff(wr, 70)
+
+			time.Sleep(time.Millisecond * time.Duration(loop))
+
+			// snare
+			wr.SetChannel(1)
+			writer.NoteOn(wr, 70, 100)
+			time.Sleep(time.Millisecond * 10)
+			writer.NoteOff(wr, 70)
+
+			// tone
+			wr.SetChannel(4)
+			writer.NoteOn(wr, 70, 100)
+			time.Sleep(time.Millisecond * 5)
+			writer.NoteOff(wr, 70)
+
+			time.Sleep(time.Millisecond * time.Duration(loop-1))
+
+			// metal
+			wr.SetChannel(2)
+			writer.NoteOn(wr, 70, 100)
+			time.Sleep(time.Millisecond * 10)
+			writer.NoteOff(wr, 70)
+		}()
+
+		log.Println(loop)
+		if loop == 480 {
+			ended = time.Now()
+			diff := started.Sub(ended)
+			fmt.Println(diff)
+			break
+		}
+
+		time.Sleep(time.Millisecond * 480)
+	}
 }
 
 func listen(in midi.In) {
@@ -70,7 +110,6 @@ func listen(in midi.In) {
 }
 
 func checkPorts() {
-	//fmt.Println("...")
 	portsMx.Lock()
 	ins, _ := drv.Ins()
 
@@ -97,27 +136,6 @@ func checkPorts() {
 	}
 
 	outs, _ := drv.Outs()
-
-	// for _, out := range outs {
-	// 	if strings.Contains(out.String(), "Client") {
-	// 		continue
-	// 	}
-	// 	if outPorts[out.Number()] != nil {
-	// 		if outPorts[out.Number()].String() != out.String() {
-	// 			outPorts[out.Number()].Close()
-	// 			fmt.Printf("closing out port: [%v] %s\n", out.Number(), outPorts[out.Number()].String())
-	// 			outPorts[out.Number()] = out
-	// 			fmt.Printf("new out port: [%v] %s\n", out.Number(), out.String())
-	// 			go greet(out)
-	// 		} else {
-	// 			continue
-	// 		}
-	// 	} else {
-	// 		fmt.Printf("new out port: [%v] %s\n", out.Number(), out.String())
-	// 		outPorts[out.Number()] = out
-	// 		go greet(out)
-	// 	}
-	// }
 
 	go greet(outs[2])
 	portsMx.Unlock()

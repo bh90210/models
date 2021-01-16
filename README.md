@@ -4,11 +4,20 @@
 
 A small library that allows you to interact with [elektron](https://www.elektron.se/)'s **model:cycles** & **model:samples** via midi written in Go.
 
+_WARNING: still in active development, things might not work, things might change._
+
 ## Prerequisites
 
 ### Go
 
 Install Go https://golang.org/doc/install
+
+### RtMidi
+
+For Ubuntu 20.04+ run `apt install librtmidi4 librtmidi-dev`
+For older versions take a look [here](https://launchpad.net/ubuntu/+source/rtmidi).
+
+Instructions for other operating systems coming soon.
 
 ## Usage
 

@@ -413,9 +413,9 @@ func NewProject() (*Project, error) {
 	project.outPorts = oo
 
 	// TODO: FIX THIS MESS
-	project.outPorts[2].Open()
+	project.outPorts[1].Open()
 
-	wr := writer.New(project.outPorts[2])
+	wr := writer.New(project.outPorts[1])
 
 	project.wr = wr
 	mu.Unlock()
@@ -490,7 +490,8 @@ func (p *Project) Play() error {
 		// loop over patterns' trigs (beats) until ends[pattern]longestBeat
 		lastBeat := ends[k]
 		it := 0
-		tick := time.NewTicker(2000 * time.Millisecond)
+		tick := time.NewTicker(4000 * time.Millisecond)
+
 	loop:
 		for {
 			<-tick.C
