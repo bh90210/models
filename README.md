@@ -2,7 +2,7 @@
 
 # elektron:models
 
-A small library that allows you to interact with [elektron](https://www.elektron.se/)'s **model:cycles** & **model:samples** via midi written in Go.
+A small library that allows you to programmatically interact with [elektron](https://www.elektron.se/)'s **model:cycles** & **model:samples** via midi written in Go.
 
 _WARNING: still in active development, things might not work, things might change._
 
