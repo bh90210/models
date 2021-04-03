@@ -49,7 +49,7 @@ func greet(out midi.Out) {
 	var ended time.Time
 
 	// INTRO
-	for loop := 0; loop <= 600; loop = loop + 2 {
+	for loop := 0; loop <= 480; loop = loop + 2 {
 		wr := writer.New(out)
 
 		go func() {
@@ -110,33 +110,43 @@ func listen(in midi.In) {
 }
 
 func checkPorts() {
+	var elektron int
 	portsMx.Lock()
 	ins, _ := drv.Ins()
 
 	for _, in := range ins {
-		if strings.Contains(in.String(), "Client") {
-			continue
-		}
-		if inPorts[in.Number()] != nil {
-			if inPorts[in.Number()].String() != in.String() {
-				inPorts[in.Number()].StopListening()
-				inPorts[in.Number()].Close()
-				fmt.Printf("closing in port: [%v] %s\n", in.Number(), inPorts[in.Number()].String())
-				inPorts[in.Number()] = in
-				fmt.Printf("new in port: [%v] %s\n", in.Number(), in.String())
-				go listen(in)
-			} else {
-				continue
-			}
-		} else {
-			inPorts[in.Number()] = in
-			fmt.Printf("new in port: [%v] %s\n", in.Number(), in.String())
+		// if strings.Contains(in.String(), "Client") {
+		// 	continue
+		// }
+		// if inPorts[in.Number()] != nil {
+		// 	if inPorts[in.Number()].String() != in.String() {
+		// 		inPorts[in.Number()].StopListening()
+		// 		inPorts[in.Number()].Close()
+		// 		fmt.Printf("closing in port: [%v] %s\n", in.Number(), inPorts[in.Number()].String())
+		// 		inPorts[in.Number()] = in
+		// 		fmt.Printf("new in port: [%v] %s\n", in.Number(), in.String())
+		// 		// if strings.Contains(in.String(), "Elektron") {
+		// 		// 	fmt.Printf("Found Elektron")
+		// 		// 	go listen(in)
+		// 		// 	elektron = in.Number()
+		// 		// }
+		// 	} else {
+		// 		continue
+		// 	}
+		// } else {
+		// inPorts[in.Number()] = in
+		fmt.Printf("new in port: [%v] %s\n", in.Number(), in.String())
+		if strings.Contains(in.String(), "Model:Cycles") {
+			fmt.Println("Found Elektron")
 			go listen(in)
+			elektron = in.Number()
 		}
+		// go listen(in)
+		// }
 	}
 
 	outs, _ := drv.Outs()
 
-	go greet(outs[2])
+	go greet(outs[elektron])
 	portsMx.Unlock()
 }

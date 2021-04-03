@@ -557,6 +557,7 @@ func (c *Project) cc(track *track, ccvalues map[Parameter]uint8) {
 	for k, v := range ccvalues {
 		c.mu.Lock()
 		c.wr.SetChannel(uint8(*track))
+		// writer.ProgramChange()
 		writer.ControlChange(c.wr, uint8(k), v)
 		c.mu.Unlock()
 	}
