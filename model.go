@@ -310,15 +310,21 @@ type Track struct {
 	Trigs []*Trig
 }
 
-// Trig .
-type Trig struct {
-	*Preset
-	*Lock
+// Scale .
+type Scale struct {
+	Len int
+	Scl int
 }
 
 // Preset .
 type Preset struct {
 	*Parameters
+}
+
+// Trig .
+type Trig struct {
+	*Preset
+	*Lock
 }
 
 // Param .
@@ -329,12 +335,6 @@ type Parameters struct {
 // Lock .
 type Lock struct {
 	*Preset
-}
-
-// Scale .
-type Scale struct {
-	Len int
-	Scl int
 }
 
 // Scale .
