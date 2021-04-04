@@ -1,19 +1,8 @@
 package elektronmodels
 
 import (
-	"fmt"
-	"sort"
-	"sync"
 	"time"
-
-	"gitlab.com/gomidi/midi"
-	"gitlab.com/gomidi/midi/writer"
-	driver "gitlab.com/gomidi/rtmididrv"
 )
-
-//
-// Mapping
-//
 
 type track uint8
 
@@ -254,20 +243,30 @@ const (
 	CHANCE     Parameter = 14
 
 	// LFO section
-	LFOSPEED      Parameter = 102
-	LFOMULTIPIER  Parameter = 103
-	LFOFADE       Parameter = 104
-	LFODEST       Parameter = 105
-	LFOWAVEFORM   Parameter = 106
-	LFOSTARTPHASE Parameter = 107
-	LFORESET      Parameter = 108
-	LFODEPTH      Parameter = 109
+	LFOSPEED Parameter = iota + 102
+	LFOMULTIPIER
+	LFOFADE
+	LFODEST
+	LFOWAVEFORM
+	LFOSTARTPHASE
+	LFORESET
+	LFODEPTH
+	// LFOMULTIPIER  Parameter = 103
+	// LFOFADE       Parameter = 104
+	// LFODEST       Parameter = 105
+	// LFOWAVEFORM   Parameter = 106
+	// LFOSTARTPHASE Parameter = 107
+	// LFORESET      Parameter = 108
+	// LFODEPTH      Parameter = 109
 
 	// FX section
-	DELAYTIME     Parameter = 85
-	DELAYFEEDBACK Parameter = 86
-	REVERBZISE    Parameter = 87
-	REBERBTONE    Parameter = 88
+	DELAYTIME Parameter = iota + 85
+	DELAYFEEDBACK
+	REVERBZISE
+	REBERBTONE
+	// DELAYFEEDBACK Parameter = 86
+	// REVERBZISE    Parameter = 87
+	// REBERBTONE    Parameter = 88
 )
 
 const (
@@ -288,294 +287,343 @@ const (
 	LPAN
 )
 
-//
-// Project
-//
-
-type Trig struct {
-	track
-	note
-	cctrack
-	level uint8
-	dur   *time.Duration
-	*cc
-	beat     uint8
-	lastBeat bool
-	hasCC    bool
-	hasNote  bool
-}
-
-func NewTrig(beat uint8) *Trig {
-	return &Trig{
-		beat: beat,
-	}
-}
-
-func LastTrig(beat uint8) *Trig {
-	trig := Trig{
-		beat:     beat,
-		lastBeat: true,
-	}
-	return &trig
-}
-
-func (t *Trig) Note(key uint8, level uint8, dur time.Duration) {
-	tn := &note{}
-	tn.key = key
-	tn.dur = &dur
-
-	t.note = *tn
-	t.level = level
-	t.hasNote = true
-}
-
-func (t *Trig) CC(values map[Parameter]uint8) {
-	t.cc = &cc{
-		pamVal: values,
-	}
-	t.hasCC = true
-}
-
-type Track struct {
-	number *track
-	trig   []*Trig
-}
-
-func NewTrack(trackNumber track, variadicTracks []*Trig) *Track {
-	for _, v := range variadicTracks {
-		switch trackNumber {
-		case T1:
-			v.track = T1
-		case T2:
-			v.track = T2
-		case T3:
-			v.track = T3
-		case T4:
-			v.track = T4
-		case T5:
-			v.track = T5
-		case T6:
-			v.track = T6
-		}
-	}
-	track := Track{
-		number: &trackNumber,
-		trig:   variadicTracks,
-	}
-
-	return &track
-}
-
-type pattern struct {
-	tracks []*Track
-}
-
+// Project .
 type Project struct {
-	pattern []*pattern
-
-	drv midi.Driver
-	mu  *sync.Mutex
-
-	inPorts  map[int]midi.In
-	outPorts map[int]midi.Out
-
-	wr *writer.Writer
-
-	loop bool
+	Name     string
+	Patterns []*Pattern
 }
 
-func NewProject() (*Project, error) {
-	drv, mu, err := newmidi()
-	if err != nil {
-		return nil, err
-	}
-
-	project := &Project{
-		drv: drv,
-		mu:  mu,
-	}
-
-	ii := make(map[int]midi.In)
-	oo := make(map[int]midi.Out)
-
-	mu.Lock()
-	ins, _ := drv.Ins()
-	for i, in := range ins {
-		ii[i] = in
-	}
-
-	outs, _ := drv.Outs()
-	for i, out := range outs {
-		oo[i] = out
-	}
-
-	project.inPorts = ii
-	project.outPorts = oo
-
-	// TODO: FIX THIS MESS
-	project.outPorts[1].Open()
-
-	wr := writer.New(project.outPorts[1])
-
-	project.wr = wr
-	mu.Unlock()
-
-	return project, nil
+// Pattern .
+type Pattern struct {
+	*Scale
+	// Cycle manuel '9.11 Scale Menu'.
+	// If true Scale Mode is set to PATTERN
+	// if false to TRACK.
+	ScaleMode bool
+	Tracks    [6]*Track
 }
 
-func (p *Project) Loop() {
-	p.loop = true
+// Track .
+type Track struct {
+	*Scale
+	*Preset
+	Trigs []*Trig
 }
 
-func (p *Project) Play() error {
-	// calculate how many patterns are present
-	totalPatters := len(p.pattern)
-	fmt.Println("Total Patterns: ", totalPatters)
-
-	// map[pattern'sBeatCounting]triggersForAll6tracks(ifPresent)
-	type tri map[int][]*Trig
-
-	// map[patternsLength]collectionOfArrangedTriggers
-	type timeline map[int]*tri
-
-	// init a key/value map acting as timeline for the song
-	timlin := make(timeline)
-
-	type patternsEnd map[int]int
-	ends := make(patternsEnd)
-
-	// range over patterns slice []pattern
-	for i, pattern := range p.pattern {
-		fmt.Println("Pattern: ", i)
-
-		patternTimeline := make(tri)
-		patternEndingHelper := make(patternsEnd)
-
-		totalTracks := len(pattern.tracks)
-		fmt.Println("Total Tracks: ", totalTracks)
-
-		// range over individual pattern's tracks
-		for tid, track := range pattern.tracks {
-			// count total trigs in track
-			trigsLength := len(track.trig)
-			fmt.Println("Track: ", track.number, " Total Trigs: ", trigsLength)
-
-			for ii := 0; ii < trigsLength; ii++ {
-				patternTimeline[int(track.trig[ii].beat)] = append(patternTimeline[int(track.trig[ii].beat)], track.trig[ii])
-
-				if track.trig[ii].lastBeat == true {
-					patternEndingHelper[tid] = int(track.trig[ii].beat)
-				}
-			}
-		}
-
-		// compare last beats to find where pattern ends
-		var longestBeat []int
-		for _, v := range patternEndingHelper {
-			longestBeat = append(longestBeat, int(v))
-		}
-		sorted := sort.IntSlice(longestBeat)
-
-		// assign pattern end to relevant map
-		last := len(sorted)
-		ends[i] = sorted[last-1]
-		timlin[i] = &patternTimeline
-	}
-
-	// range over timeline (map)
-	// each iteration return song's individual patterns in order
-	for k, pattern := range timlin {
-		beat := *pattern
-
-		// loop over patterns' trigs (beats) until ends[pattern]longestBeat
-		lastBeat := ends[k]
-		it := 0
-		tick := time.NewTicker(4000 * time.Millisecond)
-
-	loop:
-		for {
-			<-tick.C
-			totalTrigsForBeat := beat[it]
-			if len(totalTrigsForBeat) != 0 {
-				// total trigs for current beat range
-				for _, trig := range totalTrigsForBeat {
-					if trig.hasCC == true {
-						p.cc(&trig.track, trig.cc.pamVal)
-					}
-
-					if trig.hasNote == true {
-						p.note(&trig.track, &trig.note, trig.note.key, trig.level)
-					}
-				}
-
-				fmt.Println("lastbeat", lastBeat, "current beat", it)
-			}
-
-			if it == lastBeat-1 {
-				break loop
-			}
-			it++
-		}
-	}
-
-	return nil
+// Trig .
+type Trig struct {
+	*Preset
+	*Lock
 }
 
-func (c *Project) Pause() {
+// Preset .
+type Preset struct {
+	*Parameters
 }
 
-func (p *Project) Close() {
-	p.drv.Close()
+// Param .
+type Parameters struct {
+	Parameter []*Parameter
 }
 
-func (t *Project) Pattern(variadicTracks ...*Track) {
-	pattern := &pattern{
-		tracks: variadicTracks,
-	}
-
-	t.pattern = append(t.pattern, pattern)
+// Lock .
+type Lock struct {
+	*Preset
 }
 
-func (c *Project) note(track *track, note *note, key uint8, velocity uint8) {
-	timer := time.NewTimer(*note.dur)
-	// note on
-	c.mu.Lock()
-	c.wr.SetChannel(uint8(*track))
-	writer.NoteOn(c.wr, key, velocity)
-	c.mu.Unlock()
-
-	go func() {
-		<-timer.C
-		// note off
-		c.mu.Lock()
-		writer.NoteOff(c.wr, key)
-		c.mu.Unlock()
-	}()
+// Scale .
+type Scale struct {
+	Len int
+	Scl int
 }
 
-func (c *Project) cc(track *track, ccvalues map[Parameter]uint8) {
-	for k, v := range ccvalues {
-		c.mu.Lock()
-		c.wr.SetChannel(uint8(*track))
-		writer.ControlChange(c.wr, uint8(k), v)
-		c.mu.Unlock()
-	}
-}
+// Scale .
 
-// func (c *Cycles) pc(out *portmidi.Stream, track CCtrack, parameter Parameter, value int64) {
+// type Trig struct {
+// 	track
+// 	note
+// 	cctrack
+// 	level uint8
+// 	dur   *time.Duration
+// 	*cc
+// 	beat     uint8
+// 	lastBeat bool
+// 	hasCC    bool
+// 	hasNote  bool
 // }
 
-func newmidi() (*driver.Driver, *sync.Mutex, error) {
-	var err error
-	drv, err := driver.New()
-	if err != nil {
-		panic("can't initialize driver")
-	}
+// func NewTrig(beat uint8) *Trig {
+// 	return &Trig{
+// 		beat: beat,
+// 	}
+// }
 
-	mutex := &sync.Mutex{}
+// func LastTrig(beat uint8) *Trig {
+// 	trig := Trig{
+// 		beat:     beat,
+// 		lastBeat: true,
+// 	}
+// 	return &trig
+// }
 
-	return drv, mutex, nil
-}
+// func (t *Trig) Note(key uint8, level uint8, dur time.Duration) {
+// 	tn := &note{}
+// 	tn.key = key
+// 	tn.dur = &dur
+
+// 	t.note = *tn
+// 	t.level = level
+// 	t.hasNote = true
+// }
+
+// func (t *Trig) CC(values map[Parameter]uint8) {
+// 	t.cc = &cc{
+// 		pamVal: values,
+// 	}
+// 	t.hasCC = true
+// }
+
+// type Track struct {
+// 	number *track
+// 	trig   []*Trig
+// }
+
+// func NewTrack(trackNumber track, variadicTracks []*Trig) *Track {
+// 	for _, v := range variadicTracks {
+// 		switch trackNumber {
+// 		case T1:
+// 			v.track = T1
+// 		case T2:
+// 			v.track = T2
+// 		case T3:
+// 			v.track = T3
+// 		case T4:
+// 			v.track = T4
+// 		case T5:
+// 			v.track = T5
+// 		case T6:
+// 			v.track = T6
+// 		}
+// 	}
+// 	track := Track{
+// 		number: &trackNumber,
+// 		trig:   variadicTracks,
+// 	}
+
+// 	return &track
+// }
+
+// type pattern struct {
+// 	tracks []*Track
+// }
+
+// type Project struct {
+// 	pattern []*pattern
+
+// 	drv midi.Driver
+// 	mu  *sync.Mutex
+
+// 	inPorts  map[int]midi.In
+// 	outPorts map[int]midi.Out
+
+// 	wr *writer.Writer
+
+// 	loop bool
+// }
+
+// func NewProject() (*Project, error) {
+// 	drv, mu, err := newmidi()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	project := &Project{
+// 		drv: drv,
+// 		mu:  mu,
+// 	}
+
+// 	ii := make(map[int]midi.In)
+// 	oo := make(map[int]midi.Out)
+
+// 	mu.Lock()
+// 	ins, _ := drv.Ins()
+// 	for i, in := range ins {
+// 		ii[i] = in
+// 	}
+
+// 	outs, _ := drv.Outs()
+// 	for i, out := range outs {
+// 		oo[i] = out
+// 	}
+
+// 	project.inPorts = ii
+// 	project.outPorts = oo
+
+// 	// TODO: FIX THIS MESS
+// 	project.outPorts[1].Open()
+
+// 	wr := writer.New(project.outPorts[1])
+
+// 	project.wr = wr
+// 	mu.Unlock()
+
+// 	return project, nil
+// }
+
+// func (p *Project) Loop() {
+// 	p.loop = true
+// }
+
+// func (p *Project) Play() error {
+// 	// calculate how many patterns are present
+// 	totalPatters := len(p.pattern)
+// 	fmt.Println("Total Patterns: ", totalPatters)
+
+// 	// map[pattern'sBeatCounting]triggersForAll6tracks(ifPresent)
+// 	type tri map[int][]*Trig
+
+// 	// map[patternsLength]collectionOfArrangedTriggers
+// 	type timeline map[int]*tri
+
+// 	// init a key/value map acting as timeline for the song
+// 	timlin := make(timeline)
+
+// 	type patternsEnd map[int]int
+// 	ends := make(patternsEnd)
+
+// 	// range over patterns slice []pattern
+// 	for i, pattern := range p.pattern {
+// 		fmt.Println("Pattern: ", i)
+
+// 		patternTimeline := make(tri)
+// 		patternEndingHelper := make(patternsEnd)
+
+// 		totalTracks := len(pattern.tracks)
+// 		fmt.Println("Total Tracks: ", totalTracks)
+
+// 		// range over individual pattern's tracks
+// 		for tid, track := range pattern.tracks {
+// 			// count total trigs in track
+// 			trigsLength := len(track.trig)
+// 			fmt.Println("Track: ", track.number, " Total Trigs: ", trigsLength)
+
+// 			for ii := 0; ii < trigsLength; ii++ {
+// 				patternTimeline[int(track.trig[ii].beat)] = append(patternTimeline[int(track.trig[ii].beat)], track.trig[ii])
+
+// 				if track.trig[ii].lastBeat == true {
+// 					patternEndingHelper[tid] = int(track.trig[ii].beat)
+// 				}
+// 			}
+// 		}
+
+// 		// compare last beats to find where pattern ends
+// 		var longestBeat []int
+// 		for _, v := range patternEndingHelper {
+// 			longestBeat = append(longestBeat, int(v))
+// 		}
+// 		sorted := sort.IntSlice(longestBeat)
+
+// 		// assign pattern end to relevant map
+// 		last := len(sorted)
+// 		ends[i] = sorted[last-1]
+// 		timlin[i] = &patternTimeline
+// 	}
+
+// 	// range over timeline (map)
+// 	// each iteration return song's individual patterns in order
+// 	for k, pattern := range timlin {
+// 		beat := *pattern
+
+// 		// loop over patterns' trigs (beats) until ends[pattern]longestBeat
+// 		lastBeat := ends[k]
+// 		it := 0
+// 		tick := time.NewTicker(4000 * time.Millisecond)
+
+// 	loop:
+// 		for {
+// 			<-tick.C
+// 			totalTrigsForBeat := beat[it]
+// 			if len(totalTrigsForBeat) != 0 {
+// 				// total trigs for current beat range
+// 				for _, trig := range totalTrigsForBeat {
+// 					if trig.hasCC == true {
+// 						p.cc(&trig.track, trig.cc.pamVal)
+// 					}
+
+// 					if trig.hasNote == true {
+// 						p.note(&trig.track, &trig.note, trig.note.key, trig.level)
+// 					}
+// 				}
+
+// 				fmt.Println("lastbeat", lastBeat, "current beat", it)
+// 			}
+
+// 			if it == lastBeat-1 {
+// 				break loop
+// 			}
+// 			it++
+// 		}
+// 	}
+
+// 	return nil
+// }
+
+// func (c *Project) Pause() {
+// }
+
+// func (p *Project) Close() {
+// 	p.drv.Close()
+// }
+
+// func (t *Project) Pattern(variadicTracks ...*Track) {
+// 	pattern := &pattern{
+// 		tracks: variadicTracks,
+// 	}
+
+// 	t.pattern = append(t.pattern, pattern)
+// }
+
+// func (c *Project) note(track *track, note *note, key uint8, velocity uint8) {
+// 	timer := time.NewTimer(*note.dur)
+// 	// note on
+// 	c.mu.Lock()
+// 	c.wr.SetChannel(uint8(*track))
+// 	writer.NoteOn(c.wr, key, velocity)
+// 	c.mu.Unlock()
+
+// 	go func() {
+// 		<-timer.C
+// 		// note off
+// 		c.mu.Lock()
+// 		writer.NoteOff(c.wr, key)
+// 		c.mu.Unlock()
+// 	}()
+// }
+
+// func (c *Project) cc(track *track, ccvalues map[Parameter]uint8) {
+// 	for k, v := range ccvalues {
+// 		c.mu.Lock()
+// 		c.wr.SetChannel(uint8(*track))
+// 		// writer.ProgramChange()
+// 		writer.ControlChange(c.wr, uint8(k), v)
+// 		c.mu.Unlock()
+// 	}
+// }
+
+// // func (c *Cycles) pc(out *portmidi.Stream, track CCtrack, parameter Parameter, value int64) {
+// // }
+
+// func newmidi() (*driver.Driver, *sync.Mutex, error) {
+// 	var err error
+// 	drv, err := driver.New()
+// 	if err != nil {
+// 		panic("can't initialize driver")
+// 	}
+
+// 	mutex := &sync.Mutex{}
+
+// 	return drv, mutex, nil
+// }
 
 //
 // Timing
