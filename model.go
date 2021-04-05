@@ -1,7 +1,13 @@
 package elektronmodels
 
 import (
+	"strings"
+	"sync"
 	"time"
+
+	"gitlab.com/gomidi/midi"
+	"gitlab.com/gomidi/midi/writer"
+	driver "gitlab.com/gomidi/rtmididrv"
 )
 
 type track uint8
@@ -213,6 +219,7 @@ const (
 	PAN        Parameter = 10
 
 	// model:cycles
+	MACHINE     Parameter = 64
 	CYCLESPITCH Parameter = 65
 	DECAY       Parameter = 80
 	COLOR       Parameter = 16
@@ -270,10 +277,10 @@ const (
 )
 
 const (
-	LNONE  uint8 = 0
-	LPITCH uint8 = 9
+	LNONE  Parameter = 0
+	LPITCH Parameter = 9
 
-	LCOLOR uint8 = iota + 9
+	LCOLOR Parameter = iota + 9
 	LSHAPE
 	LSWEEP
 	LCONTOUR
@@ -287,57 +294,257 @@ const (
 	LPAN
 )
 
+type ScaleMode bool
+
+const (
+	PTN ScaleMode = true
+	TRK ScaleMode = false
+)
+
 // Project .
 type Project struct {
-	Name     string
-	Patterns []*Pattern
+	patterns []*Pattern
+
+	drv midi.Driver
+	mu  *sync.Mutex
+
+	in  midi.In
+	out midi.Out
+
+	wr *writer.Writer
 }
 
 // Pattern .
 type Pattern struct {
-	*Scale
-	// Cycle manuel '9.11 Scale Menu'.
-	// If true Scale Mode is set to PATTERN
-	// if false to TRACK.
-	ScaleMode bool
-	Tracks    [6]*Track
+	scale  *Scale
+	tracks [6]*Track
 }
 
 // Track .
 type Track struct {
-	*Scale
-	*Preset
-	Trigs []*Trig
-}
-
-// Scale .
-type Scale struct {
-	Len int
-	Scl int
+	scale  *Scale
+	preset *Preset
+	trigs  []*Trig
 }
 
 // Preset .
 type Preset struct {
-	*Parameters
+	parameters map[Parameter]uint8
+}
+
+// Scale .
+type Scale struct {
+	// Cycle manuel '9.11 Scale Menu'.
+	// If true Scale Mode is set to PATTERN
+	// if false to TRACK.
+	mod ScaleMode
+	// Length sets the step length of thew pattern/track.
+	len int
+	// Scale controls the speed of the playback in multiples of the current tempo.
+	scl int
+	chg int
 }
 
 // Trig .
 type Trig struct {
-	*Preset
-	*Lock
-}
-
-// Param .
-type Parameters struct {
-	Parameter []*Parameter
+	preset *Preset
+	lock   *Lock
 }
 
 // Lock .
 type Lock struct {
-	*Preset
+	preset *Preset
 }
 
-// Scale .
+func NewProject() *Project {
+	drv, err := driver.New()
+	if err != nil {
+		panic(err)
+	}
+
+	mu := &sync.Mutex{}
+	project := &Project{
+		drv: drv,
+		mu:  mu,
+	}
+
+	// find elektron and assign it to in/out
+	mu.Lock()
+	ins, _ := drv.Ins()
+	for _, in := range ins {
+		if strings.Contains(in.String(), "Model:Cycles") {
+			project.in = in
+		}
+	}
+	outs, _ := drv.Outs()
+	for _, out := range outs {
+		if strings.Contains(out.String(), "Model:Cycles") {
+			project.out = out
+		}
+	}
+	project.in.Open()
+	project.out.Open()
+	wr := writer.New(project.out)
+	project.wr = wr
+	mu.Unlock()
+
+	return project
+}
+
+func (p *Project) AddPattern(pattern ...*Pattern) {
+	p.patterns = append(p.patterns, pattern...)
+}
+
+func (p *Project) Play() {
+	writer.NoteOn(p.wr, 64, 120)
+}
+
+func (p *Project) Stop() {
+
+}
+
+func (p *Project) Next(patternNumber ...int) {
+
+}
+
+func (p *Project) SetVolume() {
+
+}
+
+// Close midi connection.
+func (p *Project) Close() {
+	p.out.Close()
+}
+
+func NewPattern(scale *Scale) *Pattern {
+	var tracks [6]*Track
+	// for i := range tracks {
+	// 	tracks[i] = new(Track)
+	// }
+	pattern := &Pattern{scale, tracks}
+
+	return pattern
+}
+
+func NewPatternFrom(pattern *Pattern) *Pattern {
+	// var copy *Pattern
+	// *copy = *pattern
+	copy := pattern
+	return copy
+}
+
+func (p *Pattern) ScaleSetup(s *Scale) {
+	p.scale = s
+}
+
+func (p *Pattern) T1(t *Track) {
+	p.tracks[0] = t
+}
+
+func (p *Pattern) T2(t *Track) {
+	p.tracks[1] = t
+}
+
+func (p *Pattern) T3(t *Track) {
+	p.tracks[2] = t
+}
+
+func (p *Pattern) T4(t *Track) {
+	p.tracks[3] = t
+}
+
+func (p *Pattern) T5(t *Track) {
+	p.tracks[4] = t
+}
+
+func (p *Pattern) T6(t *Track) {
+	p.tracks[5] = t
+}
+
+func NewTrack() *Track {
+	p := NewPreset()
+	newt := &Track{preset: p}
+	return newt
+}
+
+func (t *Track) SetScale(s *Scale) {
+	t.scale = s
+}
+
+func (t *Track) SetPreset(p *Preset) {
+	t.preset = p
+}
+
+func (t *Track) AddTrigs(trigs ...*Trig) {
+	t.trigs = append(t.trigs, trigs...)
+}
+
+func NewPreset(preset ...map[Parameter]uint8) *Preset {
+	if preset != nil {
+		return &Preset{parameters: preset[0]}
+	}
+	p := make(map[Parameter]uint8)
+	defaultPreset(p)
+	return &Preset{parameters: p}
+}
+
+func (p *Preset) SetParameter(param Parameter, value uint8) {
+	p.parameters[param] = value
+}
+
+func NewScale(mod ScaleMode, len, scl, chg int) *Scale {
+	scale := &Scale{mod, len, scl, chg}
+	return scale
+}
+
+func (s *Scale) SetMod(m ScaleMode) {
+	s.mod = m
+}
+
+func (s *Scale) SetLen(l int) {
+	s.len = l
+}
+
+func (s *Scale) SetScl(scl int) {
+	s.scl = scl
+}
+
+func (s *Scale) SetChg(c int) {
+	s.chg = c
+}
+
+func NewTrig() *Trig {
+	return &Trig{}
+}
+
+func (t *Trig) SetPreset(p *Preset) {
+	t.preset = p
+}
+
+func (t *Trig) SetLock(l *Lock) {
+	t.lock = l
+}
+
+func NewLock() *Lock {
+	return &Lock{}
+}
+
+func (l *Lock) SetPreset(p *Preset) {
+	l.preset = p
+}
+
+func defaultPreset(p map[Parameter]uint8) {
+
+}
+
+// func (p *Project) ScaleMode(opt bool) {
+// 	// switch opt {
+// 	// case true:
+// 	// 	p.
+
+// 	// }
+
+// }
 
 // type Trig struct {
 // 	track
@@ -624,7 +831,3 @@ type Lock struct {
 
 // 	return drv, mutex, nil
 // }
-
-//
-// Timing
-//
