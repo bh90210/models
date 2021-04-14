@@ -29,4 +29,3 @@ The relevant part for this library is the `APPENDIX A: MIDI SPECIFICATIONS`.
 
 ### Quick use
 
-

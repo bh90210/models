@@ -1,6 +1,7 @@
 package elektronmodels
 
 import (
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -416,27 +417,59 @@ func (p *Project) Play() {
 
 func (p *Project) Stop() {
 	for {
-		p.cc(T1, MACHINE, uint8(KICK))
-		p.cc(T1, CYCLESPITCH, 0)
-		p.nt(T1, C4, 127, 500*time.Millisecond)
-		// time.Sleep(1 * time.Second)
-		time.Sleep(500 * time.Millisecond)
+		p.cc(T1, CYCLESPITCH, 50)
+		p.noteon(T1, E5, 126)
+		time.Sleep(750 * time.Millisecond)
+		p.noteoff(T1, E5)
 
-		p.cc(T1, MACHINE, uint8(SNARE))
-		p.nt(T1, C4, 127, 500*time.Millisecond)
-		// time.Sleep(1 * time.Second)
+		p.cc(T1, CYCLESPITCH, 70)
+		p.noteon(T1, C4, 127)
+		// p.cc(T1, MACHINE, 1)
 		time.Sleep(500 * time.Millisecond)
+		p.noteoff(T1, C4)
 
-		p.cc(T1, MACHINE, uint8(METAL))
-		p.nt(T1, C4, 127, 500*time.Millisecond)
-		// time.Sleep(1 * time.Second)
+		p.cc(T1, MACHINE, uint8(rand.Intn(5)))
+		p.cc(T1, CYCLESPITCH, 80)
+		p.noteon(T1, F4, 127)
+		// p.cc(T1, MACHINE, 2)
 		time.Sleep(500 * time.Millisecond)
+		p.noteoff(T1, F4)
 
-		p.cc(T1, MACHINE, uint8(CHORD))
-		p.cc(T1, CYCLESPITCH, 100)
-		p.nt(T1, C4, 127, 500*time.Millisecond)
-		// time.Sleep(1 * time.Second)
-		time.Sleep(500 * time.Millisecond)
+		p.cc(T1, MACHINE, 0)
+		// p.cc(T1, CYCLESPITCH, 90)
+		p.cc(T1, CYCLESPITCH, uint8(rand.Intn(126)))
+		p.cc(T1, DECAY, uint8(rand.Intn(126)))
+		p.cc(T1, COLOR, uint8(rand.Intn(126)))
+		p.cc(T1, SHAPE, uint8(rand.Intn(126)))
+		p.cc(T1, SWEEP, uint8(rand.Intn(126)))
+		p.cc(T1, CONTOUR, uint8(rand.Intn(126)))
+		p.noteon(T1, A4, 127)
+		time.Sleep(250 * time.Millisecond)
+		p.noteoff(T1, A4)
+
+		// p.cc(T1, MACHINE, uint8(PERC))
+		// p.cc(T1, CYCLESPITCH, 0)
+		// p.noteon(T1, C4, 126)
+		// time.Sleep(500 * time.Millisecond)
+		// p.noteoff(T1, C4)
+
+		// p.cc(T1, MACHINE, uint8(METAL))
+		// p.cc(T1, CYCLESPITCH, 0)
+		// p.noteon(T1, C5, 127)
+		// time.Sleep(1000 * time.Millisecond)
+		// p.noteoff(T1, C5)
+
+		// p.cc(T1, MACHINE, uint8(TONE))
+		// p.cc(T1, CYCLESPITCH, 0)
+		// p.noteon(T1, F4, 126)
+		// time.Sleep(1000 * time.Millisecond)
+		// p.noteoff(T1, F4)
+
+		// p.cc(T1, MACHINE, uint8(SNARE))
+		// p.cc(T1, CYCLESPITCH, 0)
+		// p.noteon(T1, G6, 126)
+		// time.Sleep(500 * time.Millisecond)
+		// p.noteoff(T1, G4)
 	}
 }
 
@@ -453,14 +486,14 @@ func (p *Project) Close() {
 	p.out.Close()
 }
 
-func (p *Project) nt(t track, n notes, vel uint8, d time.Duration) {
+func (p *Project) noteon(t track, n notes, vel uint8) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.NoteOn(p.wr, uint8(n), vel)
 	p.mu.Unlock()
+}
 
-	time.Sleep(d)
-
+func (p *Project) noteoff(t track, n notes) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.NoteOff(p.wr, uint8(n))
