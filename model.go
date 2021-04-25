@@ -1,6 +1,7 @@
 package elektronmodels
 
 import (
+	"errors"
 	"math/rand"
 	"strings"
 	"sync"
@@ -11,14 +12,14 @@ import (
 	driver "gitlab.com/gomidi/rtmididrv"
 )
 
-type model uint8
+type model int
 
 const (
 	CYCLES model = iota
 	SAMPLES
 )
 
-type track uint8
+type track int
 
 const (
 	T1 track = iota
@@ -29,7 +30,7 @@ const (
 	T6
 )
 
-type notes uint8
+type notes int
 
 const (
 	A0 notes = iota + 21
@@ -159,7 +160,7 @@ const (
 	Bf7 notes = As7
 )
 
-type Chords uint8
+type Chords int
 
 const (
 	Unisonx2 Chords = iota
@@ -204,10 +205,10 @@ const (
 
 type note struct {
 	dur *time.Duration
-	key uint8
+	key int
 }
 
-type Parameter uint8
+type Parameter int
 
 const (
 	NOTE       Parameter = 3
@@ -285,9 +286,11 @@ const (
 	LPAN
 )
 
+type Machine int
+
 // Machine section
 const (
-	KICK Parameter = iota
+	KICK Machine = iota
 	SNARE
 	METAL
 	PERC
@@ -302,6 +305,12 @@ const (
 	TRK ScaleMode = false
 )
 
+// type Length int
+
+// const (
+// 	14 Length = iota
+// )
+
 // Project .
 type Project struct {
 	patterns []*Pattern
@@ -313,48 +322,58 @@ type Project struct {
 	out midi.Out
 
 	wr *writer.Writer
+
+	// playtime fields
+	patternLength int
 }
 
 // Pattern .
 type Pattern struct {
-	scale  *Scale
 	tracks [6]*Track
 }
 
 // Track .
 type Track struct {
 	scale  *Scale
-	preset *Preset
+	preset Preset
 	trigs  []*Trig
-}
-
-// Preset .
-type Preset struct {
-	parameters map[Parameter]uint8
 }
 
 // Scale .
 type Scale struct {
-	// Cycle manuel '9.11 Scale Menu'.
+	// Cycle manual '9.11 Scale Menu'.
 	// If true Scale Mode is set to PATTERN
 	// if false to TRACK.
 	mod ScaleMode
-	// Length sets the step length of thew pattern/track.
+	// Length sets the step length of the pattern/track.
 	len int
 	// Scale controls the speed of the playback in multiples of the current tempo.
 	scl int
 	chg int
 }
 
+// Preset .
+type Preset map[Parameter]int
+
 // Trig .
 type Trig struct {
-	preset *Preset
-	lock   *Lock
+	note *Note
+	lock *Lock
+}
+
+// Note .
+type Note struct {
+	int
+	// 0.125–128, INF
+	length   int
+	velocity int
 }
 
 // Lock .
 type Lock struct {
-	preset *Preset
+	// conditional *Condition
+	preset  *Preset
+	machine *Machine
 }
 
 func NewProject(m model) *Project {
@@ -396,14 +415,21 @@ func (p *Project) AddPattern(pattern ...*Pattern) {
 	p.patterns = append(p.patterns, pattern...)
 }
 
-func (p *Project) Play() {
-	// writer.NoteOn(p.wr, 64, 120)
+func (p *Project) Play() error {
+	// get patterns length
+	p.patternLength = len(p.patterns)
+	if p.patternLength == 0 {
+		return errors.New("Empty pattern.")
+	}
+
+	//
+
 	for _, pat := range p.patterns {
 		// range through every track of currect pattern
-		for j := 0; j < 6; j++ {
+		for j := 1; j <= 6; j++ {
 			// if current track (of current pattern) is not empty
 			if (&Track{}) != pat.tracks[j] {
-
+				go playTrack()
 			}
 		}
 		// if len(pat.tracks[0]) > 0 {
@@ -428,7 +454,7 @@ func (p *Project) Stop() {
 		time.Sleep(500 * time.Millisecond)
 		p.noteoff(T1, C4)
 
-		p.cc(T1, MACHINE, uint8(rand.Intn(5)))
+		p.cc(T1, MACHINE, int(rand.Intn(5)))
 		p.cc(T1, CYCLESPITCH, 80)
 		p.noteon(T1, F4, 127)
 		// p.cc(T1, MACHINE, 2)
@@ -437,35 +463,35 @@ func (p *Project) Stop() {
 
 		p.cc(T1, MACHINE, 0)
 		// p.cc(T1, CYCLESPITCH, 90)
-		p.cc(T1, CYCLESPITCH, uint8(rand.Intn(126)))
-		p.cc(T1, DECAY, uint8(rand.Intn(126)))
-		p.cc(T1, COLOR, uint8(rand.Intn(126)))
-		p.cc(T1, SHAPE, uint8(rand.Intn(126)))
-		p.cc(T1, SWEEP, uint8(rand.Intn(126)))
-		p.cc(T1, CONTOUR, uint8(rand.Intn(126)))
+		p.cc(T1, CYCLESPITCH, int(rand.Intn(126)))
+		p.cc(T1, DECAY, int(rand.Intn(126)))
+		p.cc(T1, COLOR, int(rand.Intn(126)))
+		p.cc(T1, SHAPE, int(rand.Intn(126)))
+		p.cc(T1, SWEEP, int(rand.Intn(126)))
+		p.cc(T1, CONTOUR, int(rand.Intn(126)))
 		p.noteon(T1, A4, 127)
 		time.Sleep(250 * time.Millisecond)
 		p.noteoff(T1, A4)
 
-		// p.cc(T1, MACHINE, uint8(PERC))
+		// p.cc(T1, MACHINE, int(PERC))
 		// p.cc(T1, CYCLESPITCH, 0)
 		// p.noteon(T1, C4, 126)
 		// time.Sleep(500 * time.Millisecond)
 		// p.noteoff(T1, C4)
 
-		// p.cc(T1, MACHINE, uint8(METAL))
+		// p.cc(T1, MACHINE, int(METAL))
 		// p.cc(T1, CYCLESPITCH, 0)
 		// p.noteon(T1, C5, 127)
 		// time.Sleep(1000 * time.Millisecond)
 		// p.noteoff(T1, C5)
 
-		// p.cc(T1, MACHINE, uint8(TONE))
+		// p.cc(T1, MACHINE, int(TONE))
 		// p.cc(T1, CYCLESPITCH, 0)
 		// p.noteon(T1, F4, 126)
 		// time.Sleep(1000 * time.Millisecond)
 		// p.noteoff(T1, F4)
 
-		// p.cc(T1, MACHINE, uint8(SNARE))
+		// p.cc(T1, MACHINE, int(SNARE))
 		// p.cc(T1, CYCLESPITCH, 0)
 		// p.noteon(T1, G6, 126)
 		// time.Sleep(500 * time.Millisecond)
@@ -486,10 +512,10 @@ func (p *Project) Close() {
 	p.out.Close()
 }
 
-func (p *Project) noteon(t track, n notes, vel uint8) {
+func (p *Project) noteon(t track, n notes, vel int) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
-	writer.NoteOn(p.wr, uint8(n), vel)
+	writer.NoteOn(p.wr, uint8(n), uint8(vel))
 	p.mu.Unlock()
 }
 
@@ -500,17 +526,17 @@ func (p *Project) noteoff(t track, n notes) {
 	p.mu.Unlock()
 }
 
-func (p *Project) cc(t track, par Parameter, val uint8) {
+func (p *Project) cc(t track, par Parameter, val int) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
-	writer.ControlChange(p.wr, uint8(par), val)
+	writer.ControlChange(p.wr, uint8(par), uint8(val))
 	p.mu.Unlock()
 }
 
-func (p *Project) pc(t track, pc uint8) {
+func (p *Project) pc(t track, pc int) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
-	writer.ProgramChange(p.wr, pc)
+	writer.ProgramChange(p.wr, uint8(pc))
 	p.mu.Unlock()
 }
 
@@ -519,7 +545,7 @@ func NewPattern(scale *Scale) *Pattern {
 	// for i := range tracks {
 	// 	tracks[i] = new(Track)
 	// }
-	pattern := &Pattern{scale, tracks}
+	pattern := &Pattern{tracks}
 
 	return pattern
 }
@@ -531,9 +557,9 @@ func NewPatternFrom(pattern *Pattern) *Pattern {
 	return copy
 }
 
-func (p *Pattern) ScaleSetup(s *Scale) {
-	p.scale = s
-}
+// func (p *Pattern) ScaleSetup(s *Scale) {
+// 	p.scale = s
+// }
 
 func (p *Pattern) T1(t *Track) {
 	p.tracks[0] = t
@@ -569,7 +595,7 @@ func (t *Track) SetScale(s *Scale) {
 	t.scale = s
 }
 
-func (t *Track) SetPreset(p *Preset) {
+func (t *Track) SetPreset(p Preset) {
 	t.preset = p
 }
 
@@ -577,17 +603,17 @@ func (t *Track) AddTrigs(trigs ...*Trig) {
 	t.trigs = append(t.trigs, trigs...)
 }
 
-func NewPreset(preset ...map[Parameter]uint8) *Preset {
+func NewPreset(preset ...map[Parameter]int) Preset {
 	if preset != nil {
-		return &Preset{parameters: preset[0]}
+		return preset[0]
 	}
-	p := make(map[Parameter]uint8)
+	p := make(map[Parameter]int)
 	defaultPreset(p)
-	return &Preset{parameters: p}
+	return p
 }
 
-func (p *Preset) SetParameter(param Parameter, value uint8) {
-	p.parameters[param] = value
+func (p Preset) SetParameter(param Parameter, value int) {
+	p[param] = value
 }
 
 // maybe?
@@ -621,9 +647,9 @@ func NewTrig() *Trig {
 	return &Trig{}
 }
 
-func (t *Trig) SetPreset(p *Preset) {
-	t.preset = p
-}
+// func (t *Trig) SetPreset(p *Preset) {
+// 	t.preset = p
+// }
 
 func (t *Trig) SetLock(l *Lock) {
 	t.lock = l
@@ -637,6 +663,6 @@ func (l *Lock) SetPreset(p *Preset) {
 	l.preset = p
 }
 
-func defaultPreset(p map[Parameter]uint8) {
+func defaultPreset(p map[Parameter]int) {
 	// p[]
 }

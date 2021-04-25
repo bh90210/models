@@ -6,7 +6,7 @@ import (
 
 func main() {
 	// lock := e.NewLock()
-	preset := em.NewPreset()
+	// preset := em.NewPreset()
 	scale := em.NewScale(true, 16, 1, 16)
 
 	// start a new project
@@ -16,7 +16,7 @@ func main() {
 	// create a new tack
 	kick := em.NewTrack()
 	// set preset for track
-	kick.SetPreset(preset)
+	// kick.SetPreset(preset)
 	// create a new trig
 	trig1 := em.NewTrig()
 	// optionally set a lock on it
@@ -32,7 +32,11 @@ func main() {
 	// time.Sleep(2 * time.Second)
 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
 	// if used and not found, an empty default pattern should be returned - silence
+	// p.Next()
 	// p.Next(2)
+	// p.Next(END)
+	// Second number indicates jump to specific pattern number rather the next in line.
+	// p.Next(END, 5)
 	// time.Sleep(2 * time.Second)
 	p.Stop()
 
