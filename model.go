@@ -1,16 +1,27 @@
 package elektronmodels
 
 import (
-	"errors"
+	"log"
 	"math/rand"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gitlab.com/gomidi/midi"
 	"gitlab.com/gomidi/midi/writer"
 	driver "gitlab.com/gomidi/rtmididrv"
 )
+
+// type Model interface {
+// 	Play(Project)
+// }
+
+// type synth func()
+
+// func (s synth) Play() {
+// 	s()
+// }
 
 type model int
 
@@ -290,7 +301,7 @@ type Machine int
 
 // Machine section
 const (
-	KICK Machine = iota
+	KICK Machine = iota + 1
 	SNARE
 	METAL
 	PERC
@@ -315,16 +326,17 @@ const (
 type Project struct {
 	patterns []*Pattern
 
+	// midi fields
 	drv midi.Driver
 	mu  *sync.Mutex
-
 	in  midi.In
 	out midi.Out
-
-	wr *writer.Writer
+	wr  *writer.Writer
 
 	// playtime fields
-	patternLength int
+	patternLength  int
+	patternRunning int
+	clock          chan int64
 }
 
 // Pattern .
@@ -334,6 +346,7 @@ type Pattern struct {
 
 // Track .
 type Track struct {
+	id     track
 	scale  *Scale
 	preset Preset
 	trigs  []*Trig
@@ -344,11 +357,19 @@ type Scale struct {
 	// Cycle manual '9.11 Scale Menu'.
 	// If true Scale Mode is set to PATTERN
 	// if false to TRACK.
+	// 	MOD Mode can be set to either PATTERN or TRACK. In PATTERN mode all tracks share the same
+	// SCALE and LENGTH settings. In TRACK mode, all tracks can have individual SCALE and LENGTH settings. Press [T1–6] to select the track to set the scale for.
 	mod ScaleMode
-	// Length sets the step length of the pattern/track.
+	// LEN Length sets the step length (amount of steps) of the pattern/track.
 	len int
-	// Scale controls the speed of the playback in multiples of the current tempo.
+	// 	SCL Scale controls the speed the playback in multiples of the current tempo. It offers seven possible
+	// settings, 1/8X, 1/4X, 1/2X, 3/4X, 1X, 3/2X and 2X. A setting of 1/8X plays back the pattern at one-eighth of
+	// the set tempo. 3/4X plays the pattern back at three-quarters of the tempo; 3/2X plays back the pattern
+	// twice as fast as the 3/4X setting. 2X makes the pattern play at twice the BPM.
 	scl int
+	// 	CHG Change controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
+	// regarding cueing and chaining. If CHG is set to OFF, the default change length is INF (infinite) in TRACK
+	// mode and the same value as LEN in PATTERN mode.
 	chg int
 }
 
@@ -363,7 +384,7 @@ type Trig struct {
 
 // Note .
 type Note struct {
-	int
+	key notes
 	// 0.125–128, INF
 	length   int
 	velocity int
@@ -416,29 +437,79 @@ func (p *Project) AddPattern(pattern ...*Pattern) {
 }
 
 func (p *Project) Play() error {
-	// get patterns length
-	p.patternLength = len(p.patterns)
-	if p.patternLength == 0 {
-		return errors.New("Empty pattern.")
-	}
+	// check for errors in current pattern
 
-	//
+	// check for warnings of the existing and incoming patterns
 
-	for _, pat := range p.patterns {
-		// range through every track of currect pattern
-		for j := 1; j <= 6; j++ {
-			// if current track (of current pattern) is not empty
-			if (&Track{}) != pat.tracks[j] {
-				go playTrack()
+	// current pattern play
+
+	var count int64
+
+	block := make(chan bool)
+	tempo := make(chan float64)
+	tick := time.NewTicker(time.Duration(60000/60.0) * time.Millisecond)
+	go func() {
+	loop:
+		for {
+			select {
+			case newTempo := <-tempo:
+				tick.Reset(time.Duration(60000/newTempo) * time.Millisecond)
+			case <-tick.C:
+				if count == 20 {
+					tick.Stop()
+					close(tempo)
+					// break loop
+					block <- true
+					break loop
+				}
+				log.Println(atomic.AddInt64(&count, 1))
 			}
 		}
-		// if len(pat.tracks[0]) > 0 {
+	}()
 
-		// }
-		// for t := pat.tracks {
+	time.Sleep(10 * time.Second)
+	tempo <- 120.5
 
-		// }
+	<-block
+
+	return nil
+}
+
+func clock() {
+
+}
+
+func (p *Project) playTrack(t *track) {
+	// set track preset
+	p.setPreset(p.patterns[0].tracks[*t].preset)
+
+	// play trigs
+	for i, trig := range p.patterns[0].tracks[*t].trigs {
+		<-p.clock
+
+		// check for machine lock for next trig
+		if *p.patterns[0].tracks[*t].trigs[i+1].lock.machine != 0 {
+			// m := (*trig.lock.preset)[MACHINE]
+			defer p.unlockMachine()
+		}
+
+		// check for preset lock
+		if len(*trig.lock.preset) != 0 {
+			for k, v := range *trig.lock.preset {
+				p.cc(*t, k, v)
+			}
+			defer p.unlockPreset()
+		}
+
+		// play note
+		p.noteon(*t, trig.note.key, trig.note.velocity)
+		time.Sleep(time.Duration(trig.note.length))
+		p.noteoff(*t, trig.note.key)
 	}
+}
+
+func (p *Project) setPreset(Preset) {
+
 }
 
 func (p *Project) Stop() {
@@ -540,76 +611,64 @@ func (p *Project) pc(t track, pc int) {
 	p.mu.Unlock()
 }
 
-func NewPattern(scale *Scale) *Pattern {
-	var tracks [6]*Track
-	// for i := range tracks {
-	// 	tracks[i] = new(Track)
-	// }
-	pattern := &Pattern{tracks}
+func (p *Project) unlockPreset() {
 
-	return pattern
 }
 
-func NewPatternFrom(pattern *Pattern) *Pattern {
-	// var copy *Pattern
-	// *copy = *pattern
-	copy := pattern
-	return copy
+func (p *Project) unlockMachine() {
+
+}
+
+func NewPattern() (newPattern *Pattern) {
+	return
+}
+
+func NewPatternFrom(pattern *Pattern) (newPattern *Pattern) {
+	return pattern
 }
 
 // func (p *Pattern) ScaleSetup(s *Scale) {
 // 	p.scale = s
 // }
 
-func (p *Pattern) T1(t *Track) {
-	p.tracks[0] = t
+func NewTrack(id track) (newTrack *Track) {
+	newTrack.id = id
+	return
 }
 
-func (p *Pattern) T2(t *Track) {
-	p.tracks[1] = t
-}
-
-func (p *Pattern) T3(t *Track) {
-	p.tracks[2] = t
-}
-
-func (p *Pattern) T4(t *Track) {
-	p.tracks[3] = t
-}
-
-func (p *Pattern) T5(t *Track) {
-	p.tracks[4] = t
-}
-
-func (p *Pattern) T6(t *Track) {
-	p.tracks[5] = t
-}
-
-func NewTrack() *Track {
-	p := NewPreset()
-	newt := &Track{preset: p}
-	return newt
-}
-
+// SetScale sets a new scale for the track.
+// If not set a default one is used.
 func (t *Track) SetScale(s *Scale) {
 	t.scale = s
 }
 
+// SetPreset sets a new scale for the track.
+// If not set a default one is used.
 func (t *Track) SetPreset(p Preset) {
 	t.preset = p
+}
+
+func (t *Track) SetTrackID(newId track) {
+	t.id = newId
+}
+
+func (t *Track) CopyTrack(newId track) (newTrack *Track) {
+	newTrack = t
+	newTrack.id = newId
+	return
 }
 
 func (t *Track) AddTrigs(trigs ...*Trig) {
 	t.trigs = append(t.trigs, trigs...)
 }
 
-func NewPreset(preset ...map[Parameter]int) Preset {
-	if preset != nil {
-		return preset[0]
+func NewPreset(inPreset ...map[Parameter]int) (newPreset Preset) {
+	if inPreset != nil {
+		newPreset = inPreset[0]
+	} else {
+		newPreset = make(map[Parameter]int)
 	}
-	p := make(map[Parameter]int)
-	defaultPreset(p)
-	return p
+	return
 }
 
 func (p Preset) SetParameter(param Parameter, value int) {
@@ -623,8 +682,7 @@ func (p *Project) CopyPreset(pat *Pattern) *Pattern {
 }
 
 func NewScale(mod ScaleMode, len, scl, chg int) *Scale {
-	scale := &Scale{mod, len, scl, chg}
-	return scale
+	return &Scale{mod, len, scl, chg}
 }
 
 func (s *Scale) SetMod(m ScaleMode) {
@@ -661,6 +719,10 @@ func NewLock() *Lock {
 
 func (l *Lock) SetPreset(p *Preset) {
 	l.preset = p
+}
+
+func (l *Lock) SetMachine(m *Machine) {
+	l.machine = m
 }
 
 func defaultPreset(p map[Parameter]int) {
