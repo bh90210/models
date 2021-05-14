@@ -27,11 +27,18 @@ func main() {
 	p := em.NewProject(em.CYCLES)
 	p.PatternInit(INTRO)
 	p.Pattern[INTRO].T1.Preset = preset
-	t1 := p.Pattern[INTRO].T1
-	t1.Preset = preset
 
-	// p.Patterns[1].Tracks[em.T6].CopyTrack(p0.Tracks[em.T1])
-	// p.Patterns[0].Tracks[em.T1].Trigs[0].SetLock(ll)
+	// copy pattern
+	p.PatternInit(VERSE)
+	p.Pattern[INTRO].CopyPattern(p.Pattern[VERSE])
+
+	// scale
+	p.Pattern[INTRO].T1.SetScale(em.PTN, 16, 4, 0)
+	// preset
+	p.Pattern[INTRO].T1.SetPreset(preset)
+	// copy track
+	p.Pattern[INTRO].T1.CopyTrack(p.Pattern[INTRO].T2)
+
 	p.Play()
 
 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping

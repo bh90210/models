@@ -2,7 +2,6 @@ package elektronmodels
 
 import (
 	"log"
-	"math/rand"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -12,16 +11,6 @@ import (
 	"gitlab.com/gomidi/midi/writer"
 	driver "gitlab.com/gomidi/rtmididrv"
 )
-
-// type Model interface {
-// 	Play(Project)
-// }
-
-// type synth func()
-
-// func (s synth) Play() {
-// 	s()
-// }
 
 type model int
 
@@ -309,18 +298,12 @@ const (
 	CHORD
 )
 
-type ScaleMode bool
+type scaleMode bool
 
 const (
-	PTN ScaleMode = true
-	TRK ScaleMode = false
+	PTN scaleMode = true
+	TRK scaleMode = false
 )
-
-// type Length int
-
-// const (
-// 	14 Length = iota
-// )
 
 // Project .
 type Project struct {
@@ -349,7 +332,6 @@ type pattern struct {
 }
 
 type track struct {
-	// id     voice
 	Scale  *scale
 	Preset Preset
 	Trigs  map[int]*trig
@@ -361,7 +343,7 @@ type scale struct {
 	// if false to TRACK.
 	// 	MOD Mode can be set to either PATTERN or TRACK. In PATTERN mode all tracks share the same
 	// SCALE and LENGTH settings. In TRACK mode, all tracks can have individual SCALE and LENGTH settings. Press [T1–6] to select the track to set the scale for.
-	mod ScaleMode
+	mod scaleMode
 	// LEN Length sets the step length (amount of steps) of the pattern/track.
 	len int
 	// 	SCL Scale controls the speed the playback in multiples of the current tempo. It offers seven possible
@@ -437,20 +419,15 @@ func NewProject(m model) *Project {
 // The equivalent of storing a pattern on ie. T1 trig 1.
 func (p *Project) PatternInit(position int) error {
 	p.Pattern[position] = &pattern{
-		T1: &track{Trigs: make(map[int]*trig)},
-		T2: &track{Trigs: make(map[int]*trig)},
-		T3: &track{Trigs: make(map[int]*trig)},
-		T4: &track{Trigs: make(map[int]*trig)},
-		T5: &track{Trigs: make(map[int]*trig)},
-		T6: &track{Trigs: make(map[int]*trig)},
+		T1: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
+		T2: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
+		T3: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
+		T4: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
+		T5: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
+		T6: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
 	}
 
 	return nil
-}
-
-func (p *Project) AddPattern(pattern *pattern) {
-	// p.Patterns = append(p.Patterns, pattern...)
-	p.Pattern[0] = pattern
 }
 
 func (p *Project) Play() error {
@@ -492,101 +469,46 @@ func (p *Project) Play() error {
 	<-block
 
 	return nil
-}
 
-func clock() {
+	// for {
+	// 	p.cc(T1, CYCLESPITCH, 50)
+	// 	p.noteon(T1, E5, 126)
+	// 	time.Sleep(750 * time.Millisecond)
+	// 	p.noteoff(T1, E5)
 
-}
+	// 	p.cc(T1, CYCLESPITCH, 70)
+	// 	p.noteon(T1, C4, 127)
+	// 	// p.cc(T1, MACHINE, 1)
+	// 	time.Sleep(500 * time.Millisecond)
+	// 	p.noteoff(T1, C4)
 
-func (p *Project) playTrack(t voice) {
-	// set track preset
-	// p.setPreset(p.Patterns[0].Tracks[t].Preset)
+	// 	p.cc(T1, MACHINE, int(rand.Intn(5)))
+	// 	p.cc(T1, CYCLESPITCH, 80)
+	// 	p.noteon(T1, F4, 127)
+	// 	// p.cc(T1, MACHINE, 2)
+	// 	time.Sleep(500 * time.Millisecond)
+	// 	p.noteoff(T1, F4)
 
-	// // play trigs
-	// for i, trig := range p.Patterns[0].Tracks[t].Trigs {
-	// 	<-p.clock
-
-	// 	// check for machine lock for next trig
-	// 	if *p.Patterns[0].Tracks[t].Trigs[i+1].Lock.Machine != KICK {
-	// 		// m := (*trig.lock.preset)[MACHINE]
-	// 		defer p.unlockMachine()
-	// 	}
-
-	// 	// check for preset lock
-	// 	if len(trig.Lock.Preset) != 0 {
-	// 		for k, v := range trig.Lock.Preset {
-	// 			p.cc(t, k, v)
-	// 		}
-	// 		defer p.unlockPreset()
-	// 	}
-
-	// 	// play note
-	// 	p.noteon(t, trig.Note.key, trig.Note.velocity)
-	// 	time.Sleep(time.Duration(trig.Note.length))
-	// 	p.noteoff(t, trig.Note.key)
+	// 	p.cc(T1, MACHINE, 0)
+	// 	// p.cc(T1, CYCLESPITCH, 90)
+	// 	p.cc(T1, CYCLESPITCH, int(rand.Intn(126)))
+	// 	p.cc(T1, DECAY, int(rand.Intn(126)))
+	// 	p.cc(T1, COLOR, int(rand.Intn(126)))
+	// 	p.cc(T1, SHAPE, int(rand.Intn(126)))
+	// 	p.cc(T1, SWEEP, int(rand.Intn(126)))
+	// 	p.cc(T1, CONTOUR, int(rand.Intn(126)))
+	// 	p.noteon(T1, A4, 127)
+	// 	time.Sleep(250 * time.Millisecond)
+	// 	p.noteoff(T1, A4)
 	// }
 }
 
-func (p *Project) setPreset(Preset) {
+func (p *Project) Pause() {
 
 }
 
 func (p *Project) Stop() {
-	for {
-		p.cc(T1, CYCLESPITCH, 50)
-		p.noteon(T1, E5, 126)
-		time.Sleep(750 * time.Millisecond)
-		p.noteoff(T1, E5)
 
-		p.cc(T1, CYCLESPITCH, 70)
-		p.noteon(T1, C4, 127)
-		// p.cc(T1, MACHINE, 1)
-		time.Sleep(500 * time.Millisecond)
-		p.noteoff(T1, C4)
-
-		p.cc(T1, MACHINE, int(rand.Intn(5)))
-		p.cc(T1, CYCLESPITCH, 80)
-		p.noteon(T1, F4, 127)
-		// p.cc(T1, MACHINE, 2)
-		time.Sleep(500 * time.Millisecond)
-		p.noteoff(T1, F4)
-
-		p.cc(T1, MACHINE, 0)
-		// p.cc(T1, CYCLESPITCH, 90)
-		p.cc(T1, CYCLESPITCH, int(rand.Intn(126)))
-		p.cc(T1, DECAY, int(rand.Intn(126)))
-		p.cc(T1, COLOR, int(rand.Intn(126)))
-		p.cc(T1, SHAPE, int(rand.Intn(126)))
-		p.cc(T1, SWEEP, int(rand.Intn(126)))
-		p.cc(T1, CONTOUR, int(rand.Intn(126)))
-		p.noteon(T1, A4, 127)
-		time.Sleep(250 * time.Millisecond)
-		p.noteoff(T1, A4)
-
-		// p.cc(T1, MACHINE, int(PERC))
-		// p.cc(T1, CYCLESPITCH, 0)
-		// p.noteon(T1, C4, 126)
-		// time.Sleep(500 * time.Millisecond)
-		// p.noteoff(T1, C4)
-
-		// p.cc(T1, MACHINE, int(METAL))
-		// p.cc(T1, CYCLESPITCH, 0)
-		// p.noteon(T1, C5, 127)
-		// time.Sleep(1000 * time.Millisecond)
-		// p.noteoff(T1, C5)
-
-		// p.cc(T1, MACHINE, int(TONE))
-		// p.cc(T1, CYCLESPITCH, 0)
-		// p.noteon(T1, F4, 126)
-		// time.Sleep(1000 * time.Millisecond)
-		// p.noteoff(T1, F4)
-
-		// p.cc(T1, MACHINE, int(SNARE))
-		// p.cc(T1, CYCLESPITCH, 0)
-		// p.noteon(T1, G6, 126)
-		// time.Sleep(500 * time.Millisecond)
-		// p.noteoff(T1, G4)
-	}
 }
 
 func (p *Project) Next(patternNumber ...int) {
@@ -638,33 +560,17 @@ func (p *Project) unlockMachine() {
 
 }
 
-func NewPattern() (newPattern *pattern) {
-	return
-}
-
-func NewPatternFrom(pattern *pattern) (newPattern *pattern) {
-	return pattern
-}
-
-// func (p *pattern) NewTrack(v voice) {
-// 	p.Tracks[int(v)] = &track{
-// 		Trigs: make(map[int]*trig),
-// 	}
-// }
-
-// func (p *Pattern) ScaleSetup(s *Scale) {
-// 	p.scale = s
-// }
-
-func NewTrack(id voice) (newTrack *track) {
-	// newTrack.id = id
-	return
+func (p *pattern) CopyPattern(dst *pattern) {
+	*dst = *p
 }
 
 // SetScale sets a new scale for the track.
 // If not set a default one is used.
-func (t *track) SetScale(s *scale) {
-	t.Scale = s
+func (t *track) SetScale(mod scaleMode, len, scl, chg int) {
+	t.Scale.mod = mod
+	t.Scale.len = len
+	t.Scale.scl = scl
+	t.Scale.chg = chg
 }
 
 // SetPreset sets a new scale for the track.
@@ -673,13 +579,8 @@ func (t *track) SetPreset(p Preset) {
 	t.Preset = p
 }
 
-func (t *track) SetTrackID(newId voice) {
-	// t.id = newId
-}
-
-func (t *track) CopyTrack(newId *track) error {
-	// newTrack := t
-	// newTrack.id = newId
+func (t *track) CopyTrack(dst *track) error {
+	*dst = *t
 	return nil
 }
 
@@ -707,11 +608,7 @@ func (p *Project) CopyPreset(pat *pattern) *pattern {
 	return newp
 }
 
-func NewScale(mod ScaleMode, len, scl, chg int) *scale {
-	return &scale{mod, len, scl, chg}
-}
-
-func (s *scale) SetMod(m ScaleMode) {
+func (s *scale) SetMod(m scaleMode) {
 	s.mod = m
 }
 
