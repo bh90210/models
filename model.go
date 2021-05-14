@@ -30,10 +30,10 @@ const (
 	SAMPLES
 )
 
-type track int
+type voice int
 
 const (
-	T1 track = iota
+	T1 voice = iota
 	T2
 	T3
 	T4
@@ -214,10 +214,10 @@ const (
 	Fifths
 )
 
-type note struct {
-	dur *time.Duration
-	key int
-}
+// type note struct {
+// 	dur *time.Duration
+// 	key int
+// }
 
 type Parameter int
 
@@ -297,11 +297,11 @@ const (
 	LPAN
 )
 
-type Machine int
+type machine int
 
 // Machine section
 const (
-	KICK Machine = iota + 1
+	KICK machine = iota + 1
 	SNARE
 	METAL
 	PERC
@@ -324,7 +324,7 @@ const (
 
 // Project .
 type Project struct {
-	patterns []*Pattern
+	Patterns map[int]*pattern
 
 	// midi fields
 	drv midi.Driver
@@ -339,21 +339,18 @@ type Project struct {
 	clock          chan int64
 }
 
-// Pattern .
-type Pattern struct {
-	tracks [6]*Track
+type pattern struct {
+	Tracks [6]*track
 }
 
-// Track .
-type Track struct {
-	id     track
-	scale  *Scale
-	preset Preset
-	trigs  []*Trig
+type track struct {
+	id     voice
+	Scale  *scale
+	Preset Preset
+	Trigs  []*trig
 }
 
-// Scale .
-type Scale struct {
+type scale struct {
 	// Cycle manual '9.11 Scale Menu'.
 	// If true Scale Mode is set to PATTERN
 	// if false to TRACK.
@@ -376,14 +373,12 @@ type Scale struct {
 // Preset .
 type Preset map[Parameter]int
 
-// Trig .
-type Trig struct {
-	note *Note
-	lock *Lock
+type trig struct {
+	Note *note
+	Lock *Lock
 }
 
-// Note .
-type Note struct {
+type note struct {
 	key notes
 	// 0.125–128, INF
 	length   int
@@ -393,8 +388,8 @@ type Note struct {
 // Lock .
 type Lock struct {
 	// conditional *Condition
-	preset  *Preset
-	machine *Machine
+	Preset  Preset
+	Machine *machine
 }
 
 func NewProject(m model) *Project {
@@ -403,11 +398,16 @@ func NewProject(m model) *Project {
 		panic(err)
 	}
 
+	patterns := make(map[int]*pattern)
 	mu := &sync.Mutex{}
 	project := &Project{
-		drv: drv,
-		mu:  mu,
+		drv:      drv,
+		mu:       mu,
+		Patterns: patterns,
 	}
+
+	// tracks := new([6]*track)
+	// project.Patterns[]
 
 	// find elektron and assign it to in/out
 	mu.Lock()
@@ -432,14 +432,21 @@ func NewProject(m model) *Project {
 	return project
 }
 
-func (p *Project) AddPattern(pattern ...*Pattern) {
-	p.patterns = append(p.patterns, pattern...)
+// func (p *Project) AddPattern(pattern ...*pattern) {
+// 	p.Patterns = append(p.Patterns, pattern...)
+// }
+
+func (p *Project) AddPattern(pattern *pattern) {
+	// p.Patterns = append(p.Patterns, pattern...)
+	p.Patterns[0] = pattern
 }
 
 func (p *Project) Play() error {
 	// check for errors in current pattern
 
 	// check for warnings of the existing and incoming patterns
+
+	// analyze scale
 
 	// current pattern play
 
@@ -479,32 +486,32 @@ func clock() {
 
 }
 
-func (p *Project) playTrack(t *track) {
+func (p *Project) playTrack(t *voice) {
 	// set track preset
-	p.setPreset(p.patterns[0].tracks[*t].preset)
+	p.setPreset(p.Patterns[0].Tracks[*t].Preset)
 
 	// play trigs
-	for i, trig := range p.patterns[0].tracks[*t].trigs {
+	for i, trig := range p.Patterns[0].Tracks[*t].Trigs {
 		<-p.clock
 
 		// check for machine lock for next trig
-		if *p.patterns[0].tracks[*t].trigs[i+1].lock.machine != 0 {
+		if *p.Patterns[0].Tracks[*t].Trigs[i+1].Lock.Machine != KICK {
 			// m := (*trig.lock.preset)[MACHINE]
 			defer p.unlockMachine()
 		}
 
 		// check for preset lock
-		if len(*trig.lock.preset) != 0 {
-			for k, v := range *trig.lock.preset {
+		if len(trig.Lock.Preset) != 0 {
+			for k, v := range trig.Lock.Preset {
 				p.cc(*t, k, v)
 			}
 			defer p.unlockPreset()
 		}
 
 		// play note
-		p.noteon(*t, trig.note.key, trig.note.velocity)
-		time.Sleep(time.Duration(trig.note.length))
-		p.noteoff(*t, trig.note.key)
+		p.noteon(*t, trig.Note.key, trig.Note.velocity)
+		time.Sleep(time.Duration(trig.Note.length))
+		p.noteoff(*t, trig.Note.key)
 	}
 }
 
@@ -583,28 +590,28 @@ func (p *Project) Close() {
 	p.out.Close()
 }
 
-func (p *Project) noteon(t track, n notes, vel int) {
+func (p *Project) noteon(t voice, n notes, vel int) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.NoteOn(p.wr, uint8(n), uint8(vel))
 	p.mu.Unlock()
 }
 
-func (p *Project) noteoff(t track, n notes) {
+func (p *Project) noteoff(t voice, n notes) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.NoteOff(p.wr, uint8(n))
 	p.mu.Unlock()
 }
 
-func (p *Project) cc(t track, par Parameter, val int) {
+func (p *Project) cc(t voice, par Parameter, val int) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.ControlChange(p.wr, uint8(par), uint8(val))
 	p.mu.Unlock()
 }
 
-func (p *Project) pc(t track, pc int) {
+func (p *Project) pc(t voice, pc int) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.ProgramChange(p.wr, uint8(pc))
@@ -619,11 +626,11 @@ func (p *Project) unlockMachine() {
 
 }
 
-func NewPattern() (newPattern *Pattern) {
+func NewPattern() (newPattern *pattern) {
 	return
 }
 
-func NewPatternFrom(pattern *Pattern) (newPattern *Pattern) {
+func NewPatternFrom(pattern *pattern) (newPattern *pattern) {
 	return pattern
 }
 
@@ -631,35 +638,35 @@ func NewPatternFrom(pattern *Pattern) (newPattern *Pattern) {
 // 	p.scale = s
 // }
 
-func NewTrack(id track) (newTrack *Track) {
+func NewTrack(id voice) (newTrack *track) {
 	newTrack.id = id
 	return
 }
 
 // SetScale sets a new scale for the track.
 // If not set a default one is used.
-func (t *Track) SetScale(s *Scale) {
-	t.scale = s
+func (t *track) SetScale(s *scale) {
+	t.Scale = s
 }
 
 // SetPreset sets a new scale for the track.
 // If not set a default one is used.
-func (t *Track) SetPreset(p Preset) {
-	t.preset = p
+func (t *track) SetPreset(p Preset) {
+	t.Preset = p
 }
 
-func (t *Track) SetTrackID(newId track) {
+func (t *track) SetTrackID(newId voice) {
 	t.id = newId
 }
 
-func (t *Track) CopyTrack(newId track) (newTrack *Track) {
-	newTrack = t
-	newTrack.id = newId
-	return
+func (t *track) CopyTrack(newId *track) error {
+	// newTrack := t
+	// newTrack.id = newId
+	return nil
 }
 
-func (t *Track) AddTrigs(trigs ...*Trig) {
-	t.trigs = append(t.trigs, trigs...)
+func (t *track) AddTrigs(trigs ...*trig) {
+	t.Trigs = append(t.Trigs, trigs...)
 }
 
 func NewPreset(inPreset ...map[Parameter]int) (newPreset Preset) {
@@ -671,58 +678,59 @@ func NewPreset(inPreset ...map[Parameter]int) (newPreset Preset) {
 	return
 }
 
+// TODO: delete
 func (p Preset) SetParameter(param Parameter, value int) {
 	p[param] = value
 }
 
 // maybe?
-func (p *Project) CopyPreset(pat *Pattern) *Pattern {
+func (p *Project) CopyPreset(pat *pattern) *pattern {
 	newp := pat
 	return newp
 }
 
-func NewScale(mod ScaleMode, len, scl, chg int) *Scale {
-	return &Scale{mod, len, scl, chg}
+func NewScale(mod ScaleMode, len, scl, chg int) *scale {
+	return &scale{mod, len, scl, chg}
 }
 
-func (s *Scale) SetMod(m ScaleMode) {
+func (s *scale) SetMod(m ScaleMode) {
 	s.mod = m
 }
 
-func (s *Scale) SetLen(l int) {
+func (s *scale) SetLen(l int) {
 	s.len = l
 }
 
-func (s *Scale) SetScl(scl int) {
+func (s *scale) SetScl(scl int) {
 	s.scl = scl
 }
 
-func (s *Scale) SetChg(c int) {
+func (s *scale) SetChg(c int) {
 	s.chg = c
 }
 
-func NewTrig() *Trig {
-	return &Trig{}
+func NewTrig() *trig {
+	return &trig{}
 }
 
 // func (t *Trig) SetPreset(p *Preset) {
 // 	t.preset = p
 // }
 
-func (t *Trig) SetLock(l *Lock) {
-	t.lock = l
+func (t *trig) SetLock(l *Lock) {
+	t.Lock = l
 }
 
 func NewLock() *Lock {
 	return &Lock{}
 }
 
-func (l *Lock) SetPreset(p *Preset) {
-	l.preset = p
+func (l *Lock) SetPreset(p Preset) {
+	l.Preset = p
 }
 
-func (l *Lock) SetMachine(m *Machine) {
-	l.machine = m
+func (l *Lock) SetMachine(m *machine) {
+	l.Machine = m
 }
 
 func defaultPreset(p map[Parameter]int) {
