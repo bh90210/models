@@ -324,7 +324,7 @@ const (
 
 // Project .
 type Project struct {
-	Patterns map[int]*pattern
+	Pattern map[int]*pattern
 
 	// midi fields
 	drv midi.Driver
@@ -340,14 +340,19 @@ type Project struct {
 }
 
 type pattern struct {
-	Tracks [6]*track
+	T1 *track
+	T2 *track
+	T3 *track
+	T4 *track
+	T5 *track
+	T6 *track
 }
 
 type track struct {
-	id     voice
+	// id     voice
 	Scale  *scale
 	Preset Preset
-	Trigs  []*trig
+	Trigs  map[int]*trig
 }
 
 type scale struct {
@@ -393,21 +398,17 @@ type Lock struct {
 }
 
 func NewProject(m model) *Project {
+	mu := &sync.Mutex{}
 	drv, err := driver.New()
 	if err != nil {
 		panic(err)
 	}
 
-	patterns := make(map[int]*pattern)
-	mu := &sync.Mutex{}
 	project := &Project{
-		drv:      drv,
-		mu:       mu,
-		Patterns: patterns,
+		drv:     drv,
+		mu:      mu,
+		Pattern: make(map[int]*pattern),
 	}
-
-	// tracks := new([6]*track)
-	// project.Patterns[]
 
 	// find elektron and assign it to in/out
 	mu.Lock()
@@ -432,13 +433,24 @@ func NewProject(m model) *Project {
 	return project
 }
 
-// func (p *Project) AddPattern(pattern ...*pattern) {
-// 	p.Patterns = append(p.Patterns, pattern...)
-// }
+// PatternInit initiates a new pattern for the selected position.
+// The equivalent of storing a pattern on ie. T1 trig 1.
+func (p *Project) PatternInit(position int) error {
+	p.Pattern[position] = &pattern{
+		T1: &track{Trigs: make(map[int]*trig)},
+		T2: &track{Trigs: make(map[int]*trig)},
+		T3: &track{Trigs: make(map[int]*trig)},
+		T4: &track{Trigs: make(map[int]*trig)},
+		T5: &track{Trigs: make(map[int]*trig)},
+		T6: &track{Trigs: make(map[int]*trig)},
+	}
+
+	return nil
+}
 
 func (p *Project) AddPattern(pattern *pattern) {
 	// p.Patterns = append(p.Patterns, pattern...)
-	p.Patterns[0] = pattern
+	p.Pattern[0] = pattern
 }
 
 func (p *Project) Play() error {
@@ -486,33 +498,33 @@ func clock() {
 
 }
 
-func (p *Project) playTrack(t *voice) {
+func (p *Project) playTrack(t voice) {
 	// set track preset
-	p.setPreset(p.Patterns[0].Tracks[*t].Preset)
+	// p.setPreset(p.Patterns[0].Tracks[t].Preset)
 
-	// play trigs
-	for i, trig := range p.Patterns[0].Tracks[*t].Trigs {
-		<-p.clock
+	// // play trigs
+	// for i, trig := range p.Patterns[0].Tracks[t].Trigs {
+	// 	<-p.clock
 
-		// check for machine lock for next trig
-		if *p.Patterns[0].Tracks[*t].Trigs[i+1].Lock.Machine != KICK {
-			// m := (*trig.lock.preset)[MACHINE]
-			defer p.unlockMachine()
-		}
+	// 	// check for machine lock for next trig
+	// 	if *p.Patterns[0].Tracks[t].Trigs[i+1].Lock.Machine != KICK {
+	// 		// m := (*trig.lock.preset)[MACHINE]
+	// 		defer p.unlockMachine()
+	// 	}
 
-		// check for preset lock
-		if len(trig.Lock.Preset) != 0 {
-			for k, v := range trig.Lock.Preset {
-				p.cc(*t, k, v)
-			}
-			defer p.unlockPreset()
-		}
+	// 	// check for preset lock
+	// 	if len(trig.Lock.Preset) != 0 {
+	// 		for k, v := range trig.Lock.Preset {
+	// 			p.cc(t, k, v)
+	// 		}
+	// 		defer p.unlockPreset()
+	// 	}
 
-		// play note
-		p.noteon(*t, trig.Note.key, trig.Note.velocity)
-		time.Sleep(time.Duration(trig.Note.length))
-		p.noteoff(*t, trig.Note.key)
-	}
+	// 	// play note
+	// 	p.noteon(t, trig.Note.key, trig.Note.velocity)
+	// 	time.Sleep(time.Duration(trig.Note.length))
+	// 	p.noteoff(t, trig.Note.key)
+	// }
 }
 
 func (p *Project) setPreset(Preset) {
@@ -634,12 +646,18 @@ func NewPatternFrom(pattern *pattern) (newPattern *pattern) {
 	return pattern
 }
 
+// func (p *pattern) NewTrack(v voice) {
+// 	p.Tracks[int(v)] = &track{
+// 		Trigs: make(map[int]*trig),
+// 	}
+// }
+
 // func (p *Pattern) ScaleSetup(s *Scale) {
 // 	p.scale = s
 // }
 
 func NewTrack(id voice) (newTrack *track) {
-	newTrack.id = id
+	// newTrack.id = id
 	return
 }
 
@@ -656,7 +674,7 @@ func (t *track) SetPreset(p Preset) {
 }
 
 func (t *track) SetTrackID(newId voice) {
-	t.id = newId
+	// t.id = newId
 }
 
 func (t *track) CopyTrack(newId *track) error {
@@ -666,7 +684,7 @@ func (t *track) CopyTrack(newId *track) error {
 }
 
 func (t *track) AddTrigs(trigs ...*trig) {
-	t.Trigs = append(t.Trigs, trigs...)
+	// t.Trigs = append(t.Trigs, trigs...)
 }
 
 func NewPreset(inPreset ...map[Parameter]int) (newPreset Preset) {

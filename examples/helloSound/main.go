@@ -4,6 +4,13 @@ import (
 	em "github.com/bh90210/elektronmodels"
 )
 
+const (
+	INTRO int = iota
+	VERSE
+	CHORUS
+	OUTRO
+)
+
 func main() {
 	preset := make(em.Preset)
 	preset[0] = 8
@@ -18,11 +25,13 @@ func main() {
 
 	// start a new project
 	p := em.NewProject(em.CYCLES)
-	p0 := p.Patterns[0]
-	t0 := p0.Tracks[em.T1]
-	t0.Preset = preset
-	p.Patterns[1].Tracks[em.T6].CopyTrack(t0)
-	p.Patterns[0].Tracks[em.T1].Trigs[0].SetLock(ll)
+	p.PatternInit(INTRO)
+	p.Pattern[INTRO].T1.Preset = preset
+	t1 := p.Pattern[INTRO].T1
+	t1.Preset = preset
+
+	// p.Patterns[1].Tracks[em.T6].CopyTrack(p0.Tracks[em.T1])
+	// p.Patterns[0].Tracks[em.T1].Trigs[0].SetLock(ll)
 	p.Play()
 
 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
