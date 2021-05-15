@@ -1,5 +1,7 @@
 <img src="https://i.imgur.com/omIKbjp.jpg" alt="drawing" width="350"/> <img src="https://i.imgur.com/pJbgSUh.png" alt="drawing" width="350"/>
 
+[![DeepSource](https://deepsource.io/gh/bh90210/elektronmodels.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/bh90210/elektronmodels/?ref=repository-badge)
+
 # elektron:models
 
 A small library that allows you to programmatically interact with [elektron](https://www.elektron.se/)'s **model:cycles** & **model:samples** via midi written in Go.
