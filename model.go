@@ -535,7 +535,9 @@ func (p *Project) Stop() {
 
 }
 
-// Next .
+// Next 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
+// if used and not found, an empty default pattern should be returned - silence
+// Second number indicates jump to specific pattern number rather the next in line.
 func (p *Project) Next(patternNumber ...int) {
 
 }
@@ -638,23 +640,16 @@ func (s *scale) SetChg(chg int8) {
 	s.chg = chg
 }
 
-// preset
-
-// ??
-// func (p Preset) CopyPreset(pat *pattern) *pattern {
-// 	return pat
-// }
+// SetParameter .
+func (p Preset) Parameter(parameter Parameter, value int8) {
+	p[parameter] = value
+}
 
 // SetNote .
 func (t *trig) SetNote(key notes, length float64, velocity int8) {
 	t.Note.key = key
 	t.Note.length = length
 	t.Note.velocity = velocity
-}
-
-// SetLock .
-func (t *trig) SetLock(l *Lock) {
-	t.Lock = l
 }
 
 // CopyTrig .

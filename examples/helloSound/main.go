@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"time"
 
 	em "github.com/bh90210/elektronmodels"
 )
@@ -52,10 +51,12 @@ func main() {
 	p0.T1.Scale.SetChg(0)
 
 	// preset
+	p0.T1.Preset = preset
+	p0.T1.Preset.Parameter(em.COLOR, 120)
 
 	// trig
 	p0.T1.Trig[0].SetNote(em.A4, 0.4, 127)
-	p0.T1.Trig[0].SetLock(lock)
+	p0.T1.Trig[0].Lock = lock
 
 	// copy trig
 	p0.T1.InitTrig(6)
@@ -72,6 +73,7 @@ func main() {
 
 	// lock
 	p0.T1.Trig[0].Lock.Preset = preset
+	p0.T1.Trig[0].Lock.Preset[em.COLOR] = 12
 	p0.T1.Trig[0].Lock.SetMachine(em.KICK)
 
 	// copy pattern
@@ -80,20 +82,17 @@ func main() {
 
 	p.Play()
 
-	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
-	// if used and not found, an empty default pattern should be returned - silence
-	p.Next()
-	p.Next(2)
-	p.Next(CHORUS)
-	// Second number indicates jump to specific pattern number rather the next in line.
-	p.Next(OUTRO, 5)
+	// p.Next()
+	// p.Next(2)
+	// p.Next(CHORUS)
+	// p.Next(OUTRO, 5)
 
-	p.Pause()
-	time.Sleep(2 * time.Second)
-	p.Play()
+	// p.Pause()
+	// time.Sleep(2 * time.Second)
+	// p.Play()
 
-	p.Stop()
-	p.Play()
+	// p.Stop()
+	// p.Play()
 
 	p.Close()
 }
