@@ -1,42 +1,36 @@
 package elektronmodels
 
-func NewDefault() Preset {
+func defaultT1() Preset {
 	d := make(map[Parameter]int)
 	d[COLOR] = 10
 	return d
 }
 
-func DefaultT1() Preset {
+func defaultT2() Preset {
 	d := make(map[Parameter]int)
 	d[COLOR] = 10
 	return d
 }
 
-func DefaultT2() Preset {
+func defaultT3() Preset {
 	d := make(map[Parameter]int)
 	d[COLOR] = 10
 	return d
 }
 
-func DefaultT3() Preset {
+func defaultT4() Preset {
 	d := make(map[Parameter]int)
 	d[COLOR] = 10
 	return d
 }
 
-func DefaultT4() Preset {
+func defaultT5() Preset {
 	d := make(map[Parameter]int)
 	d[COLOR] = 10
 	return d
 }
 
-func DefaultT5() Preset {
-	d := make(map[Parameter]int)
-	d[COLOR] = 10
-	return d
-}
-
-func DefaultT6() Preset {
+func defaultT6() Preset {
 	d := make(map[Parameter]int)
 	d[COLOR] = 10
 	return d

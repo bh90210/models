@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	em "github.com/bh90210/elektronmodels"
 )
 
@@ -67,14 +69,18 @@ func main() {
 
 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
 	// if used and not found, an empty default pattern should be returned - silence
-	// p.Next()
-	// p.Next(2)
-	// p.Next(END)
+	p.Next()
+	p.Next(2)
+	p.Next(CHORUS)
 	// Second number indicates jump to specific pattern number rather the next in line.
-	// p.Next(END, 5)
+	p.Next(OUTRO, 5)
 
-	// p.Pause()
-	// p.Stop()
+	p.Pause()
+	time.Sleep(2 * time.Second)
+	p.Play()
+
+	p.Stop()
+	p.Play()
 
 	p.Close()
 }

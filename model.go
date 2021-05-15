@@ -305,8 +305,6 @@ const (
 	TRK scaleMode = false
 )
 
-// project
-
 // Project .
 type Project struct {
 	Pattern map[int]*pattern
@@ -381,6 +379,8 @@ type Lock struct {
 	Machine machine
 }
 
+// project
+
 func NewProject(m model) *Project {
 	mu := &sync.Mutex{}
 	drv, err := driver.New()
@@ -417,16 +417,16 @@ func NewProject(m model) *Project {
 	return project
 }
 
-// PatternInit initiates a new pattern for the selected position.
+// InitPattern initiates a new pattern for the selected position.
 // The equivalent of storing a pattern on ie. T1 trig 1.
 func (p *Project) InitPattern(position int) error {
 	p.Pattern[position] = &pattern{
-		T1: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT1(), Trig: make(map[int]*trig)},
-		T2: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT2(), Trig: make(map[int]*trig)},
-		T3: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT3(), Trig: make(map[int]*trig)},
-		T4: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT4(), Trig: make(map[int]*trig)},
-		T5: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT5(), Trig: make(map[int]*trig)},
-		T6: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT6(), Trig: make(map[int]*trig)},
+		T1: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT1(), Trig: make(map[int]*trig)},
+		T2: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT2(), Trig: make(map[int]*trig)},
+		T3: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT3(), Trig: make(map[int]*trig)},
+		T4: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT4(), Trig: make(map[int]*trig)},
+		T5: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT5(), Trig: make(map[int]*trig)},
+		T6: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT6(), Trig: make(map[int]*trig)},
 	}
 
 	return nil
@@ -572,9 +572,9 @@ func (p *pattern) CopyPattern(dst *pattern) {
 
 // SetScale sets a new scale for the track.
 // If not set a default one is used.
-func (t *track) SetScale(mod scaleMode, len, scl, chg int) {
+func (t *track) SetScale(mod scaleMode, length, scl, chg int) {
 	t.Scale.mod = mod
-	t.Scale.len = len
+	t.Scale.len = length
 	t.Scale.scl = scl
 	t.Scale.chg = chg
 }
@@ -599,8 +599,8 @@ func (s *scale) SetMod(mod scaleMode) {
 	s.mod = mod
 }
 
-func (s *scale) SetLen(len int) {
-	s.len = len
+func (s *scale) SetLen(length int) {
+	s.len = length
 }
 
 func (s *scale) SetScl(scl int) {
@@ -614,16 +614,16 @@ func (s *scale) SetChg(chg int) {
 // preset
 
 // ??
-func (p Preset) CopyPreset(pat *pattern) *pattern {
-	return pat
-}
+// func (p Preset) CopyPreset(pat *pattern) *pattern {
+// 	return pat
+// }
 
 //trig
 
-func (t *trig) SetNote(key notes, len, vel int) {
+func (t *trig) SetNote(key notes, length, velocity int) {
 	t.Note.key = key
-	t.Note.length = len
-	t.Note.velocity = vel
+	t.Note.length = length
+	t.Note.velocity = velocity
 }
 
 func (t *trig) SetLock(l *Lock) {
@@ -636,12 +636,12 @@ func (n *note) SetKey(key notes) {
 	n.key = key
 }
 
-func (n *note) SetLength(len int) {
-	n.length = len
+func (n *note) SetLength(length int) {
+	n.length = length
 }
 
-func (n *note) SetVelocity(vel int) {
-	n.velocity = vel
+func (n *note) SetVelocity(velocity int) {
+	n.velocity = velocity
 }
 
 // lock
