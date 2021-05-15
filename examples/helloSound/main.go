@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"time"
 
 	em "github.com/bh90210/elektronmodels"
@@ -14,9 +15,11 @@ const (
 )
 
 func main() {
+	// preset
 	preset := make(em.Preset)
 	preset[em.COLOR] = 100
 
+	// lock
 	lock := new(em.Lock)
 	lock.Preset = preset
 
@@ -24,46 +27,56 @@ func main() {
 	// locks = append(locks, ll)
 
 	// start a new project
-	p := em.NewProject(em.CYCLES)
+	p, err := em.NewProject(em.CYCLES)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// pattern
 	p.InitPattern(INTRO)
-	p.Pattern[INTRO].T1.Preset = preset
-
-	// copy pattern
-	p.InitPattern(VERSE)
-	p.Pattern[INTRO].CopyPattern(p.Pattern[VERSE])
+	p0 := p.Pattern[INTRO]
 
 	// track
-	p.Pattern[INTRO].T1.SetScale(em.PTN, 16, 4, 0)
-	p.Pattern[INTRO].T1.SetPreset(preset)
-	p.Pattern[INTRO].T1.CopyTrack(p.Pattern[INTRO].T2)
-	p.Pattern[INTRO].T1.InitTrig(0)
-	p.Pattern[INTRO].T1.InitTrig(2)
-	p.Pattern[INTRO].T1.InitTrig(4)
+	p0.T1.SetScale(em.PTN, 16, 1.0, 0)
+	p0.T1.Preset = preset
+	p0.T1.InitTrig(0)
+	p0.T1.InitTrig(2)
+	p0.T1.InitTrig(4)
+	// copy track
+	p0.T2.CopyTrack(p0.T1)
 
 	// scale
-	p.Pattern[INTRO].T1.Scale.SetMod(em.PTN)
-	p.Pattern[INTRO].T1.Scale.SetLen(15)
-	p.Pattern[INTRO].T1.Scale.SetScl(4)
-	p.Pattern[INTRO].T1.Scale.SetChg(0)
+	p0.T1.Scale.SetMod(em.PTN)
+	p0.T1.Scale.SetLen(15)
+	p0.T1.Scale.SetScl(1.0)
+	// inf = 127
+	p0.T1.Scale.SetChg(0)
 
 	// preset
 
 	// trig
-	p.Pattern[INTRO].T1.Trig[0].SetNote(em.A4, 4, 125)
-	p.Pattern[INTRO].T1.Trig[0].SetLock(lock)
-	p.Pattern[INTRO].T1.Trig[2].SetNote(em.E4, 4, 125)
-	p.Pattern[INTRO].T1.Trig[2].SetLock(lock)
-	p.Pattern[INTRO].T1.Trig[4].SetNote(em.C4, 4, 125)
-	p.Pattern[INTRO].T1.Trig[4].SetLock(lock)
+	p0.T1.Trig[0].SetNote(em.A4, 0.4, 127)
+	p0.T1.Trig[0].SetLock(lock)
+
+	// copy trig
+	p0.T1.InitTrig(6)
+	p0.T1.Trig[6].CopyTrig(p0.T1.Trig[4])
 
 	// note
-	p.Pattern[INTRO].T1.Trig[0].Note.SetKey(em.A5)
-	p.Pattern[INTRO].T1.Trig[0].Note.SetLength(4)
-	p.Pattern[INTRO].T1.Trig[0].Note.SetVelocity(126)
+	p0.T1.Trig[0].Note.SetKey(em.A5)
+	// inf = 0
+	p0.T1.Trig[0].Note.SetLength(0.4)
+	p0.T1.Trig[0].Note.SetVelocity(126)
+	// copy note
+	p0.T1.Trig[2].Note.CopyNote(p0.T1.Trig[0].Note)
+	p0.T1.Trig[4].Note.CopyNote(p0.T1.Trig[0].Note)
 
 	// lock
-	p.Pattern[INTRO].T1.Trig[0].Lock.SetPreset(preset)
-	p.Pattern[INTRO].T1.Trig[0].Lock.SetMachine(em.KICK)
+	p0.T1.Trig[0].Lock.Preset = preset
+	p0.T1.Trig[0].Lock.SetMachine(em.KICK)
+
+	// copy pattern
+	p.InitPattern(VERSE)
+	p.Pattern[VERSE].CopyPattern(p.Pattern[INTRO])
 
 	p.Play()
 

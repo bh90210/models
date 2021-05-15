@@ -1,6 +1,7 @@
 package elektronmodels
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -12,14 +13,14 @@ import (
 	driver "gitlab.com/gomidi/rtmididrv"
 )
 
-type model int
+type model string
 
 const (
-	CYCLES model = iota
-	SAMPLES
+	CYCLES  model = "Model:Cycles"
+	SAMPLES model = "Model:Samples"
 )
 
-type voice int
+type voice int8
 
 const (
 	T1 voice = iota
@@ -30,7 +31,7 @@ const (
 	T6
 )
 
-type notes int
+type notes int8
 
 const (
 	A0 notes = iota + 21
@@ -121,6 +122,17 @@ const (
 	As7
 	B7
 	C8
+	Cs8
+	D8
+	Ds8
+	E8
+	F8
+	Fs8
+	G8
+	Gs8
+	A8
+	As8
+	B8
 
 	Bf0 notes = As0
 	Df1 notes = Cs1
@@ -158,9 +170,14 @@ const (
 	Gf7 notes = Fs7
 	Af7 notes = Gs7
 	Bf7 notes = As7
+	Df8 notes = Cs8
+	Ef8 notes = Ds8
+	Gf8 notes = Fs8
+	Af8 notes = Gs8
+	Bf8 notes = As8
 )
 
-type Chords int
+type Chords int8
 
 const (
 	Unisonx2 Chords = iota
@@ -208,7 +225,7 @@ const (
 // 	key int
 // }
 
-type Parameter int
+type Parameter int8
 
 const (
 	NOTE       Parameter = 3
@@ -286,7 +303,7 @@ const (
 	LPAN
 )
 
-type machine int
+type machine int8
 
 // Machine section
 const (
@@ -339,26 +356,14 @@ type track struct {
 
 type scale struct {
 	// Cycle manual '9.11 Scale Menu'.
-	// If true Scale Mode is set to PATTERN
-	// if false to TRACK.
-	// 	MOD Mode can be set to either PATTERN or TRACK. In PATTERN mode all tracks share the same
-	// SCALE and LENGTH settings. In TRACK mode, all tracks can have individual SCALE and LENGTH settings. Press [T1–6] to select the track to set the scale for.
 	mod scaleMode
-	// LEN Length sets the step length (amount of steps) of the pattern/track.
 	len int
-	// 	SCL Scale controls the speed the playback in multiples of the current tempo. It offers seven possible
-	// settings, 1/8X, 1/4X, 1/2X, 3/4X, 1X, 3/2X and 2X. A setting of 1/8X plays back the pattern at one-eighth of
-	// the set tempo. 3/4X plays the pattern back at three-quarters of the tempo; 3/2X plays back the pattern
-	// twice as fast as the 3/4X setting. 2X makes the pattern play at twice the BPM.
-	scl int
-	// 	CHG Change controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
-	// regarding cueing and chaining. If CHG is set to OFF, the default change length is INF (infinite) in TRACK
-	// mode and the same value as LEN in PATTERN mode.
-	chg int
+	scl float64
+	chg int8
 }
 
 // Preset .
-type Preset map[Parameter]int
+type Preset map[Parameter]int8
 
 type trig struct {
 	Note *note
@@ -366,10 +371,9 @@ type trig struct {
 }
 
 type note struct {
-	key notes
-	// 0.125–128, INF
-	length   int
-	velocity int
+	key      notes
+	length   float64
+	velocity int8
 }
 
 // Lock .
@@ -379,13 +383,13 @@ type Lock struct {
 	Machine machine
 }
 
-// project
-
-func NewProject(m model) *Project {
+// NewProject initiates and returns a *Project struct.
+// TODO: better documentation
+func NewProject(m model) (*Project, error) {
 	mu := &sync.Mutex{}
 	drv, err := driver.New()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	project := &Project{
@@ -395,26 +399,42 @@ func NewProject(m model) *Project {
 	}
 
 	// find elektron and assign it to in/out
+	var helperIn, helperOut bool
 	mu.Lock()
 	ins, _ := drv.Ins()
 	for _, in := range ins {
-		if strings.Contains(in.String(), "Model:Cycles") || strings.Contains(in.String(), "Model:Samples") {
+		if strings.Contains(in.String(), string(m)) {
 			project.in = in
+			helperIn = true
 		}
 	}
 	outs, _ := drv.Outs()
 	for _, out := range outs {
-		if strings.Contains(out.String(), "Model:Cycles") || strings.Contains(out.String(), "Model:Samples") {
+		if strings.Contains(out.String(), string(m)) {
 			project.out = out
+			helperOut = true
 		}
 	}
-	project.in.Open()
-	project.out.Open()
+	// check if nothing found
+	if !helperIn && !helperOut {
+		return nil, fmt.Errorf("device %s not found", m)
+	}
+
+	err = project.in.Open()
+	if err != nil {
+		return nil, err
+	}
+
+	err = project.out.Open()
+	if err != nil {
+		return nil, err
+	}
+
 	wr := writer.New(project.out)
 	project.wr = wr
 	mu.Unlock()
 
-	return project
+	return project, nil
 }
 
 // InitPattern initiates a new pattern for the selected position.
@@ -505,18 +525,22 @@ func (p *Project) Play() error {
 	// }
 }
 
+// Pause .
 func (p *Project) Pause() {
 
 }
 
+// Stop .
 func (p *Project) Stop() {
 
 }
 
+// Next .
 func (p *Project) Next(patternNumber ...int) {
 
 }
 
+// SetVolume .
 func (p *Project) SetVolume() {
 
 }
@@ -526,7 +550,7 @@ func (p *Project) Close() {
 	p.out.Close()
 }
 
-func (p *Project) noteon(t voice, n notes, vel int) {
+func (p *Project) noteon(t voice, n notes, vel int8) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.NoteOn(p.wr, uint8(n), uint8(vel))
@@ -540,14 +564,14 @@ func (p *Project) noteoff(t voice, n notes) {
 	p.mu.Unlock()
 }
 
-func (p *Project) cc(t voice, par Parameter, val int) {
+func (p *Project) cc(t voice, par Parameter, val int8) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.ControlChange(p.wr, uint8(par), uint8(val))
 	p.mu.Unlock()
 }
 
-func (p *Project) pc(t voice, pc int) {
+func (p *Project) pc(t voice, pc int8) {
 	p.mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.ProgramChange(p.wr, uint8(pc))
@@ -562,52 +586,55 @@ func (p *Project) unlockMachine() {
 
 }
 
-// pattern
-
-func (p *pattern) CopyPattern(dst *pattern) {
-	*dst = *p
+// CopyPattern copies the input source pattern to caller destination.
+func (p *pattern) CopyPattern(src *pattern) {
+	*p = *src
 }
-
-// track
 
 // SetScale sets a new scale for the track.
 // If not set a default one is used.
-func (t *track) SetScale(mod scaleMode, length, scl, chg int) {
+func (t *track) SetScale(mod scaleMode, length int, scl float64, chg int8) {
 	t.Scale.mod = mod
 	t.Scale.len = length
 	t.Scale.scl = scl
 	t.Scale.chg = chg
 }
 
-// SetPreset sets a new scale for the track.
-// If not set a default one is used.
-func (t *track) SetPreset(p Preset) {
-	t.Preset = p
+// CopyTrack copies a track from input source to caller destination.
+func (t *track) CopyTrack(src *track) {
+	*t = *src
 }
 
-func (t *track) CopyTrack(dst *track) {
-	*dst = *t
-}
-
+// InitTrig initiates a trigger note and places it to designated position of trigs map (map[int]*trig).
+// All triggers need to be initiated first so the appropriate memeroy allocation takes place.
+// If you do not init your trigs you will get panic: runtime error.
 func (t *track) InitTrig(position int) {
 	t.Trig[position] = &trig{&note{C4, 4, 126}, &Lock{}}
 }
 
-// scale
-
+// SetMod Mode can be set to either PTN (pattern) or TRK (track). In PTN mode all tracks share the same
+// SCALE and LENGTH settings. In TRK mode, all tracks can have individual SCALE and LENGTH settings.
 func (s *scale) SetMod(mod scaleMode) {
 	s.mod = mod
 }
 
+// SetLen sets the step length (amount of steps) of the pattern/track.
 func (s *scale) SetLen(length int) {
 	s.len = length
 }
 
-func (s *scale) SetScl(scl int) {
+// SetScl controls the speed the playback in multiples of the current tempo. It offers seven possible
+// settings, 1/8X, 1/4X, 1/2X, 3/4X, 1X, 3/2X and 2X. A setting of 1/8X plays back the pattern at one-eighth of
+// the set tempo. 3/4X plays the pattern back at three-quarters of the tempo; 3/2X plays back the pattern
+// twice as fast as the 3/4X setting. 2X makes the pattern play at twice the BPM.
+func (s *scale) SetScl(scl float64) {
 	s.scl = scl
 }
 
-func (s *scale) SetChg(chg int) {
+// SetChg controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
+// regarding cueing and chaining. If CHG is set to OFF, the default change length is INF (infinite) in TRACK
+// mode and the same value as LEN in PATTERN mode.
+func (s *scale) SetChg(chg int8) {
 	s.chg = chg
 }
 
@@ -618,38 +645,83 @@ func (s *scale) SetChg(chg int) {
 // 	return pat
 // }
 
-//trig
-
-func (t *trig) SetNote(key notes, length, velocity int) {
+// SetNote .
+func (t *trig) SetNote(key notes, length float64, velocity int8) {
 	t.Note.key = key
 	t.Note.length = length
 	t.Note.velocity = velocity
 }
 
+// SetLock .
 func (t *trig) SetLock(l *Lock) {
 	t.Lock = l
 }
 
-// note
+// CopyTrig .
+func (t *trig) CopyTrig(src *trig) {
+	*t = *src
+}
 
+// SetKey .
 func (n *note) SetKey(key notes) {
 	n.key = key
 }
 
-func (n *note) SetLength(length int) {
+// SetLength Trig Length sets the duration of the notes. When a note has finished playing a NOTE OFF command
+// is sent. The INF setting equals infinite note length. This parameter only applies if GATE is set to ON or
+// when sending trig length data over MIDI. (0.125–128, INF)
+func (n *note) SetLength(length float64) {
 	n.length = length
 }
 
-func (n *note) SetVelocity(velocity int) {
+// SetVelocity .
+func (n *note) SetVelocity(velocity int8) {
 	n.velocity = velocity
 }
 
-// lock
-
-func (l *Lock) SetPreset(p Preset) {
-	l.Preset = p
+// CopyNote .
+func (n *note) CopyNote(src *note) {
+	*n = *src
 }
 
+// SetMachine .
 func (l *Lock) SetMachine(m machine) {
 	l.Machine = m
+}
+
+// default presets for voices 1-6
+func defaultT1() Preset {
+	d := make(map[Parameter]int8)
+	d[COLOR] = 10
+	return d
+}
+
+func defaultT2() Preset {
+	d := make(map[Parameter]int8)
+	d[COLOR] = 10
+	return d
+}
+
+func defaultT3() Preset {
+	d := make(map[Parameter]int8)
+	d[COLOR] = 10
+	return d
+}
+
+func defaultT4() Preset {
+	d := make(map[Parameter]int8)
+	d[COLOR] = 10
+	return d
+}
+
+func defaultT5() Preset {
+	d := make(map[Parameter]int8)
+	d[COLOR] = 10
+	return d
+}
+
+func defaultT6() Preset {
+	d := make(map[Parameter]int8)
+	d[COLOR] = 10
+	return d
 }
