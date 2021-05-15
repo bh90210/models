@@ -13,31 +13,55 @@ const (
 
 func main() {
 	preset := make(em.Preset)
-	preset[0] = 8
 	preset[em.COLOR] = 100
-	preset.SetParameter(em.COLOR, 100)
 
-	ll := new(em.Lock)
-	ll.Preset = preset
+	lock := new(em.Lock)
+	lock.Preset = preset
 
 	// locks := make([]*em.Lock, 0)
 	// locks = append(locks, ll)
 
 	// start a new project
 	p := em.NewProject(em.CYCLES)
-	p.PatternInit(INTRO)
+	p.InitPattern(INTRO)
 	p.Pattern[INTRO].T1.Preset = preset
 
 	// copy pattern
-	p.PatternInit(VERSE)
+	p.InitPattern(VERSE)
 	p.Pattern[INTRO].CopyPattern(p.Pattern[VERSE])
 
-	// scale
+	// track
 	p.Pattern[INTRO].T1.SetScale(em.PTN, 16, 4, 0)
-	// preset
 	p.Pattern[INTRO].T1.SetPreset(preset)
-	// copy track
 	p.Pattern[INTRO].T1.CopyTrack(p.Pattern[INTRO].T2)
+	p.Pattern[INTRO].T1.InitTrig(0)
+	p.Pattern[INTRO].T1.InitTrig(2)
+	p.Pattern[INTRO].T1.InitTrig(4)
+
+	// scale
+	p.Pattern[INTRO].T1.Scale.SetMod(em.PTN)
+	p.Pattern[INTRO].T1.Scale.SetLen(15)
+	p.Pattern[INTRO].T1.Scale.SetScl(4)
+	p.Pattern[INTRO].T1.Scale.SetChg(0)
+
+	// preset
+
+	// trig
+	p.Pattern[INTRO].T1.Trig[0].SetNote(em.A4, 4, 125)
+	p.Pattern[INTRO].T1.Trig[0].SetLock(lock)
+	p.Pattern[INTRO].T1.Trig[2].SetNote(em.E4, 4, 125)
+	p.Pattern[INTRO].T1.Trig[2].SetLock(lock)
+	p.Pattern[INTRO].T1.Trig[4].SetNote(em.C4, 4, 125)
+	p.Pattern[INTRO].T1.Trig[4].SetLock(lock)
+
+	// note
+	p.Pattern[INTRO].T1.Trig[0].Note.SetKey(em.A5)
+	p.Pattern[INTRO].T1.Trig[0].Note.SetLength(4)
+	p.Pattern[INTRO].T1.Trig[0].Note.SetVelocity(126)
+
+	// lock
+	p.Pattern[INTRO].T1.Trig[0].Lock.SetPreset(preset)
+	p.Pattern[INTRO].T1.Trig[0].Lock.SetMachine(em.KICK)
 
 	p.Play()
 

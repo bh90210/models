@@ -305,6 +305,8 @@ const (
 	TRK scaleMode = false
 )
 
+// project
+
 // Project .
 type Project struct {
 	Pattern map[int]*pattern
@@ -334,7 +336,7 @@ type pattern struct {
 type track struct {
 	Scale  *scale
 	Preset Preset
-	Trigs  map[int]*trig
+	Trig   map[int]*trig
 }
 
 type scale struct {
@@ -376,7 +378,7 @@ type note struct {
 type Lock struct {
 	// conditional *Condition
 	Preset  Preset
-	Machine *machine
+	Machine machine
 }
 
 func NewProject(m model) *Project {
@@ -417,14 +419,14 @@ func NewProject(m model) *Project {
 
 // PatternInit initiates a new pattern for the selected position.
 // The equivalent of storing a pattern on ie. T1 trig 1.
-func (p *Project) PatternInit(position int) error {
+func (p *Project) InitPattern(position int) error {
 	p.Pattern[position] = &pattern{
-		T1: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
-		T2: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
-		T3: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
-		T4: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
-		T5: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
-		T6: &track{Scale: &scale{}, Trigs: make(map[int]*trig)},
+		T1: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT1(), Trig: make(map[int]*trig)},
+		T2: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT2(), Trig: make(map[int]*trig)},
+		T3: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT3(), Trig: make(map[int]*trig)},
+		T4: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT4(), Trig: make(map[int]*trig)},
+		T5: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT5(), Trig: make(map[int]*trig)},
+		T6: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: DefaultT6(), Trig: make(map[int]*trig)},
 	}
 
 	return nil
@@ -560,9 +562,13 @@ func (p *Project) unlockMachine() {
 
 }
 
+// pattern
+
 func (p *pattern) CopyPattern(dst *pattern) {
 	*dst = *p
 }
+
+// track
 
 // SetScale sets a new scale for the track.
 // If not set a default one is used.
@@ -579,75 +585,71 @@ func (t *track) SetPreset(p Preset) {
 	t.Preset = p
 }
 
-func (t *track) CopyTrack(dst *track) error {
+func (t *track) CopyTrack(dst *track) {
 	*dst = *t
-	return nil
 }
 
-func (t *track) AddTrigs(trigs ...*trig) {
-	// t.Trigs = append(t.Trigs, trigs...)
+func (t *track) InitTrig(position int) {
+	t.Trig[position] = &trig{&note{C4, 4, 126}, &Lock{}}
 }
 
-func NewPreset(inPreset ...map[Parameter]int) (newPreset Preset) {
-	if inPreset != nil {
-		newPreset = inPreset[0]
-	} else {
-		newPreset = make(map[Parameter]int)
-	}
-	return
+// scale
+
+func (s *scale) SetMod(mod scaleMode) {
+	s.mod = mod
 }
 
-// TODO: delete
-func (p Preset) SetParameter(param Parameter, value int) {
-	p[param] = value
-}
-
-// maybe?
-func (p *Project) CopyPreset(pat *pattern) *pattern {
-	newp := pat
-	return newp
-}
-
-func (s *scale) SetMod(m scaleMode) {
-	s.mod = m
-}
-
-func (s *scale) SetLen(l int) {
-	s.len = l
+func (s *scale) SetLen(len int) {
+	s.len = len
 }
 
 func (s *scale) SetScl(scl int) {
 	s.scl = scl
 }
 
-func (s *scale) SetChg(c int) {
-	s.chg = c
+func (s *scale) SetChg(chg int) {
+	s.chg = chg
 }
 
-func NewTrig() *trig {
-	return &trig{}
+// preset
+
+// ??
+func (p Preset) CopyPreset(pat *pattern) *pattern {
+	return pat
 }
 
-// func (t *Trig) SetPreset(p *Preset) {
-// 	t.preset = p
-// }
+//trig
+
+func (t *trig) SetNote(key notes, len, vel int) {
+	t.Note.key = key
+	t.Note.length = len
+	t.Note.velocity = vel
+}
 
 func (t *trig) SetLock(l *Lock) {
 	t.Lock = l
 }
 
-func NewLock() *Lock {
-	return &Lock{}
+// note
+
+func (n *note) SetKey(key notes) {
+	n.key = key
 }
+
+func (n *note) SetLength(len int) {
+	n.length = len
+}
+
+func (n *note) SetVelocity(vel int) {
+	n.velocity = vel
+}
+
+// lock
 
 func (l *Lock) SetPreset(p Preset) {
 	l.Preset = p
 }
 
-func (l *Lock) SetMachine(m *machine) {
+func (l *Lock) SetMachine(m machine) {
 	l.Machine = m
-}
-
-func defaultPreset(p map[Parameter]int) {
-	// p[]
 }
