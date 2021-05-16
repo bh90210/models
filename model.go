@@ -220,11 +220,6 @@ const (
 	Fifths
 )
 
-// type note struct {
-// 	dur *time.Duration
-// 	key int
-// }
-
 type Parameter int8
 
 const (
@@ -232,6 +227,13 @@ const (
 	TRACKLEVEL Parameter = 17
 	MUTE       Parameter = 94
 	PAN        Parameter = 10
+	SWEEP      Parameter = 18
+	CONTOUR    Parameter = 19
+	DELAY      Parameter = 12
+	REVERB     Parameter = 13
+	VOLUMEDIST Parameter = 7
+	SWING      Parameter = 15
+	CHANCE     Parameter = 14
 
 	// model:cycles
 	MACHINE     Parameter = 64
@@ -239,6 +241,8 @@ const (
 	DECAY       Parameter = 80
 	COLOR       Parameter = 16
 	SHAPE       Parameter = 17
+	PUNCH       Parameter = 66
+	GATE        Parameter = 67
 
 	// model:samples
 	PITCH        Parameter = 16
@@ -246,27 +250,18 @@ const (
 	SAMPLELENGTH Parameter = 20
 	CUTOFF       Parameter = 74
 	RESONANCE    Parameter = 71
-
-	// model:cycles
-	PUNCH Parameter = 66
-	GATE  Parameter = 67
-
-	// model:samples
-	LOOP    Parameter = 17
-	REVERSE Parameter = 18
-
-	SWEEP   Parameter = 18
-	CONTOUR Parameter = 19
-	DELAY   Parameter = 12
-	REVERB  Parameter = 13
-
-	VOLUMEDIST Parameter = 7
-	SWING      Parameter = 15
-	CHANCE     Parameter = 14
+	LOOP         Parameter = 17
+	REVERSE      Parameter = 18
 )
 
 const (
-	// LFO section
+	DELAYTIME Parameter = iota + 85
+	DELAYFEEDBACK
+	REVERBSIZE
+	REVERBTONE
+)
+
+const (
 	LFOSPEED Parameter = iota + 102
 	LFOMULTIPIER
 	LFOFADE
@@ -277,35 +272,27 @@ const (
 	LFODEPTH
 )
 
-const (
-	// FX section
-	DELAYTIME Parameter = iota + 85
-	DELAYFEEDBACK
-	REVERBZISE
-	REBERBTONE
-)
+// ??
+// const (
+// 	LNONE  Parameter = 0
+// 	LPITCH Parameter = 9
 
-const (
-	LNONE  Parameter = 0
-	LPITCH Parameter = 9
-
-	LCOLOR Parameter = iota + 9
-	LSHAPE
-	LSWEEP
-	LCONTOUR
-	LPAW
-	LGATE
-	LFTUN
-	LDECAY
-	LDIST
-	LDELAY
-	LREVERB
-	LPAN
-)
+// 	LCOLOR Parameter = iota + 9
+// 	LSHAPE
+// 	LSWEEP
+// 	LCONTOUR
+// 	LPAW
+// 	LGATE
+// 	LFTUN
+// 	LDECAY
+// 	LDIST
+// 	LDELAY
+// 	LREVERB
+// 	LPAN
+// )
 
 type machine int8
 
-// Machine section
 const (
 	KICK machine = iota + 1
 	SNARE
@@ -324,28 +311,18 @@ const (
 
 // Project .
 type Project struct {
+	model   model
 	Pattern map[int]*pattern
-
-	// midi fields
-	drv midi.Driver
-	mu  *sync.Mutex
-	in  midi.In
-	out midi.Out
-	wr  *writer.Writer
-
-	// playtime fields
-	patternLength  int
-	patternRunning int
-	clock          chan int64
 }
 
 type pattern struct {
-	T1 *track
-	T2 *track
-	T3 *track
-	T4 *track
-	T5 *track
-	T6 *track
+	T1    *track
+	T2    *track
+	T3    *track
+	T4    *track
+	T5    *track
+	T6    *track
+	tempo float64
 }
 
 type track struct {
@@ -383,58 +360,25 @@ type Lock struct {
 	Machine machine
 }
 
+type Sequencer struct {
+	*Project
+	// midi fields
+	drv midi.Driver
+	mu  *sync.Mutex
+	in  midi.In
+	out midi.Out
+	wr  *writer.Writer
+
+	// playtime fields
+	tempo          chan float64
+	patternLength  int
+	patternRunning int
+}
+
 // NewProject initiates and returns a *Project struct.
 // TODO: better documentation
-func NewProject(m model) (*Project, error) {
-	mu := &sync.Mutex{}
-	drv, err := driver.New()
-	if err != nil {
-		return nil, err
-	}
-
-	project := &Project{
-		drv:     drv,
-		mu:      mu,
-		Pattern: make(map[int]*pattern),
-	}
-
-	// find elektron and assign it to in/out
-	var helperIn, helperOut bool
-	mu.Lock()
-	ins, _ := drv.Ins()
-	for _, in := range ins {
-		if strings.Contains(in.String(), string(m)) {
-			project.in = in
-			helperIn = true
-		}
-	}
-	outs, _ := drv.Outs()
-	for _, out := range outs {
-		if strings.Contains(out.String(), string(m)) {
-			project.out = out
-			helperOut = true
-		}
-	}
-	// check if nothing found
-	if !helperIn && !helperOut {
-		return nil, fmt.Errorf("device %s not found", m)
-	}
-
-	err = project.in.Open()
-	if err != nil {
-		return nil, err
-	}
-
-	err = project.out.Open()
-	if err != nil {
-		return nil, err
-	}
-
-	wr := writer.New(project.out)
-	project.wr = wr
-	mu.Unlock()
-
-	return project, nil
+func NewProject(m model) *Project {
+	return &Project{model: m, Pattern: make(map[int]*pattern)}
 }
 
 // InitPattern initiates a new pattern for the selected position.
@@ -452,145 +396,65 @@ func (p *Project) InitPattern(position int) error {
 	return nil
 }
 
-func (p *Project) Play() error {
-	// check for errors in current pattern
+func (p *Project) Sequencer() (*Sequencer, error) {
+	mu := &sync.Mutex{}
+	drv, err := driver.New()
+	if err != nil {
+		return nil, err
+	}
 
-	// check for warnings of the existing and incoming patterns
+	sequencer := &Sequencer{
+		drv: drv,
+		mu:  mu,
+	}
 
-	// analyze scale
-
-	// current pattern play
-
-	var count int64
-
-	block := make(chan bool)
-	tempo := make(chan float64)
-	tick := time.NewTicker(time.Duration(60000/60.0) * time.Millisecond)
-	go func() {
-	loop:
-		for {
-			select {
-			case newTempo := <-tempo:
-				tick.Reset(time.Duration(60000/newTempo) * time.Millisecond)
-			case <-tick.C:
-				if count == 20 {
-					tick.Stop()
-					close(tempo)
-					// break loop
-					block <- true
-					break loop
-				}
-				log.Println(atomic.AddInt64(&count, 1))
-			}
+	// find elektron and assign it to in/out
+	var helperIn, helperOut bool
+	mu.Lock()
+	ins, _ := drv.Ins()
+	for _, in := range ins {
+		if strings.Contains(in.String(), string(p.model)) {
+			sequencer.in = in
+			helperIn = true
 		}
-	}()
+	}
+	outs, _ := drv.Outs()
+	for _, out := range outs {
+		if strings.Contains(out.String(), string(p.model)) {
+			sequencer.out = out
+			helperOut = true
+		}
+	}
+	// check if nothing found
+	if !helperIn && !helperOut {
+		return nil, fmt.Errorf("device %s not found", p.model)
+	}
 
-	time.Sleep(10 * time.Second)
-	tempo <- 120.5
+	err = sequencer.in.Open()
+	if err != nil {
+		return nil, err
+	}
 
-	<-block
+	err = sequencer.out.Open()
+	if err != nil {
+		return nil, err
+	}
 
-	return nil
+	wr := writer.New(sequencer.out)
+	sequencer.wr = wr
+	mu.Unlock()
 
-	// for {
-	// 	p.cc(T1, CYCLESPITCH, 50)
-	// 	p.noteon(T1, E5, 126)
-	// 	time.Sleep(750 * time.Millisecond)
-	// 	p.noteoff(T1, E5)
-
-	// 	p.cc(T1, CYCLESPITCH, 70)
-	// 	p.noteon(T1, C4, 127)
-	// 	// p.cc(T1, MACHINE, 1)
-	// 	time.Sleep(500 * time.Millisecond)
-	// 	p.noteoff(T1, C4)
-
-	// 	p.cc(T1, MACHINE, int(rand.Intn(5)))
-	// 	p.cc(T1, CYCLESPITCH, 80)
-	// 	p.noteon(T1, F4, 127)
-	// 	// p.cc(T1, MACHINE, 2)
-	// 	time.Sleep(500 * time.Millisecond)
-	// 	p.noteoff(T1, F4)
-
-	// 	p.cc(T1, MACHINE, 0)
-	// 	// p.cc(T1, CYCLESPITCH, 90)
-	// 	p.cc(T1, CYCLESPITCH, int(rand.Intn(126)))
-	// 	p.cc(T1, DECAY, int(rand.Intn(126)))
-	// 	p.cc(T1, COLOR, int(rand.Intn(126)))
-	// 	p.cc(T1, SHAPE, int(rand.Intn(126)))
-	// 	p.cc(T1, SWEEP, int(rand.Intn(126)))
-	// 	p.cc(T1, CONTOUR, int(rand.Intn(126)))
-	// 	p.noteon(T1, A4, 127)
-	// 	time.Sleep(250 * time.Millisecond)
-	// 	p.noteoff(T1, A4)
-	// }
-}
-
-// Pause .
-func (p *Project) Pause() {
-
-}
-
-// Stop .
-func (p *Project) Stop() {
-
-}
-
-// Next 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
-// if used and not found, an empty default pattern should be returned - silence
-// Second number indicates jump to specific pattern number rather the next in line.
-func (p *Project) Next(patternNumber ...int) {
-
-}
-
-// SetVolume .
-func (p *Project) SetVolume() {
-
-}
-
-// Close midi connection.
-func (p *Project) Close() {
-	p.out.Close()
-}
-
-func (p *Project) noteon(t voice, n notes, vel int8) {
-	p.mu.Lock()
-	p.wr.SetChannel(uint8(t))
-	writer.NoteOn(p.wr, uint8(n), uint8(vel))
-	p.mu.Unlock()
-}
-
-func (p *Project) noteoff(t voice, n notes) {
-	p.mu.Lock()
-	p.wr.SetChannel(uint8(t))
-	writer.NoteOff(p.wr, uint8(n))
-	p.mu.Unlock()
-}
-
-func (p *Project) cc(t voice, par Parameter, val int8) {
-	p.mu.Lock()
-	p.wr.SetChannel(uint8(t))
-	writer.ControlChange(p.wr, uint8(par), uint8(val))
-	p.mu.Unlock()
-}
-
-func (p *Project) pc(t voice, pc int8) {
-	p.mu.Lock()
-	p.wr.SetChannel(uint8(t))
-	writer.ProgramChange(p.wr, uint8(pc))
-	p.mu.Unlock()
-}
-
-func (p *Project) unlockPreset() {
-
-}
-
-func (p *Project) unlockMachine() {
-
+	return sequencer, nil
 }
 
 // CopyPattern copies the input source pattern to caller destination.
 func (p *pattern) CopyPattern(src *pattern) {
 	*p = *src
+}
+
+// SetTempo .
+func (p *pattern) SetTempo(tempo float64) {
+	p.tempo = tempo
 }
 
 // SetScale sets a new scale for the track.
@@ -682,6 +546,147 @@ func (n *note) CopyNote(src *note) {
 // SetMachine .
 func (l *Lock) SetMachine(m machine) {
 	l.Machine = m
+}
+
+func (p *Sequencer) Play(position ...int) error {
+	// check for errors in current pattern
+
+	// check for warnings of the existing and incoming patterns
+
+	// analyze scale
+
+	// current pattern play
+
+	var count int64
+
+	block := make(chan bool)
+	p.tempo = make(chan float64)
+
+	tick := time.NewTicker(time.Duration(60000/60.0) * time.Millisecond)
+	go func() {
+	loop:
+		for {
+			select {
+			case newTempo := <-p.tempo:
+				tick.Reset(time.Duration(60000/newTempo) * time.Millisecond)
+			case <-tick.C:
+				if count == 20 {
+					tick.Stop()
+					close(p.tempo)
+					// break loop
+					block <- true
+					break loop
+				}
+				log.Println(atomic.AddInt64(&count, 1))
+			}
+		}
+	}()
+
+	time.Sleep(10 * time.Second)
+	p.tempo <- 120.5
+
+	<-block
+
+	return nil
+
+	// for {
+	// 	p.cc(T1, CYCLESPITCH, 50)
+	// 	p.noteon(T1, E5, 126)
+	// 	time.Sleep(750 * time.Millisecond)
+	// 	p.noteoff(T1, E5)
+
+	// 	p.cc(T1, CYCLESPITCH, 70)
+	// 	p.noteon(T1, C4, 127)
+	// 	// p.cc(T1, MACHINE, 1)
+	// 	time.Sleep(500 * time.Millisecond)
+	// 	p.noteoff(T1, C4)
+
+	// 	p.cc(T1, MACHINE, int(rand.Intn(5)))
+	// 	p.cc(T1, CYCLESPITCH, 80)
+	// 	p.noteon(T1, F4, 127)
+	// 	// p.cc(T1, MACHINE, 2)
+	// 	time.Sleep(500 * time.Millisecond)
+	// 	p.noteoff(T1, F4)
+
+	// 	p.cc(T1, MACHINE, 0)
+	// 	// p.cc(T1, CYCLESPITCH, 90)
+	// 	p.cc(T1, CYCLESPITCH, int(rand.Intn(126)))
+	// 	p.cc(T1, DECAY, int(rand.Intn(126)))
+	// 	p.cc(T1, COLOR, int(rand.Intn(126)))
+	// 	p.cc(T1, SHAPE, int(rand.Intn(126)))
+	// 	p.cc(T1, SWEEP, int(rand.Intn(126)))
+	// 	p.cc(T1, CONTOUR, int(rand.Intn(126)))
+	// 	p.noteon(T1, A4, 127)
+	// 	time.Sleep(250 * time.Millisecond)
+	// 	p.noteoff(T1, A4)
+	// }
+}
+
+// Next 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
+// if used and not found, an empty default pattern should be returned - silence
+// Second number indicates jump to specific pattern number rather the next in line.
+func (p *Sequencer) Next(patternNumber ...int) {
+
+}
+
+// Pause .
+func (p *Sequencer) Pause() {
+
+}
+
+// Stop .
+func (p *Sequencer) Stop() {
+
+}
+
+func (p *Sequencer) Tempo(bpm float64) {
+
+}
+
+// SetVolume .
+func (p *Sequencer) Volume(value int8) {
+
+}
+
+// Close midi connection.
+func (p *Sequencer) Close() {
+	p.out.Close()
+}
+
+func (p *Sequencer) noteon(t voice, n notes, vel int8) {
+	p.mu.Lock()
+	p.wr.SetChannel(uint8(t))
+	writer.NoteOn(p.wr, uint8(n), uint8(vel))
+	p.mu.Unlock()
+}
+
+func (p *Sequencer) noteoff(t voice, n notes) {
+	p.mu.Lock()
+	p.wr.SetChannel(uint8(t))
+	writer.NoteOff(p.wr, uint8(n))
+	p.mu.Unlock()
+}
+
+func (p *Sequencer) cc(t voice, par Parameter, val int8) {
+	p.mu.Lock()
+	p.wr.SetChannel(uint8(t))
+	writer.ControlChange(p.wr, uint8(par), uint8(val))
+	p.mu.Unlock()
+}
+
+func (p *Sequencer) pc(t voice, pc int8) {
+	p.mu.Lock()
+	p.wr.SetChannel(uint8(t))
+	writer.ProgramChange(p.wr, uint8(pc))
+	p.mu.Unlock()
+}
+
+func (p *Sequencer) unlockPreset() {
+
+}
+
+func (p *Sequencer) unlockMachine() {
+
 }
 
 // default presets for voices 1-6

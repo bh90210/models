@@ -16,26 +16,49 @@ const (
 func main() {
 	// preset
 	preset := make(em.Preset)
-	preset[em.COLOR] = 100
+	preset[em.TRACKLEVEL] = 127
+	preset[em.MUTE] = 0
+	preset[em.PAN] = 65
+
+	preset[em.SWEEP] = 60
+	preset[em.CONTOUR] = 60
+
+	preset[em.DELAY] = 10
+	preset[em.DELAYTIME] = 25
+	preset[em.DELAYFEEDBACK] = 25
+
+	preset[em.REVERB] = 25
+	preset[em.REVERBSIZE] = 25
+	preset[em.REVERBTONE] = 25
+
+	preset[em.VOLUMEDIST] = 40
+
+	preset[em.CYCLESPITCH] = 40
+	preset[em.DECAY] = 40
+	preset[em.COLOR] = 40
+	preset[em.SHAPE] = 40
+
+	preset[em.PUNCH] = 0
+	preset[em.GATE] = 0
 
 	// lock
 	lock := new(em.Lock)
 	lock.Preset = preset
+	lock.Machine = em.METAL
 
 	// locks := make([]*em.Lock, 0)
 	// locks = append(locks, ll)
 
 	// start a new project
-	p, err := em.NewProject(em.CYCLES)
-	if err != nil {
-		log.Fatal(err)
-	}
+	p := em.NewProject(em.CYCLES)
+
 	// pattern
 	p.InitPattern(INTRO)
 	p0 := p.Pattern[INTRO]
+	p0.SetTempo(90)
 
 	// track
-	p0.T1.SetScale(em.PTN, 16, 1.0, 0)
+	p0.T1.SetScale(em.PTN, 8, 1.0, 0)
 	p0.T1.Preset = preset
 	p0.T1.InitTrig(0)
 	p0.T1.InitTrig(2)
@@ -45,9 +68,9 @@ func main() {
 
 	// scale
 	p0.T1.Scale.SetMod(em.PTN)
-	p0.T1.Scale.SetLen(15)
+	p0.T1.Scale.SetLen(8)
 	p0.T1.Scale.SetScl(1.0)
-	// inf = 127
+	// inf = 0
 	p0.T1.Scale.SetChg(0)
 
 	// preset
@@ -79,8 +102,21 @@ func main() {
 	// copy pattern
 	p.InitPattern(VERSE)
 	p.Pattern[VERSE].CopyPattern(p.Pattern[INTRO])
+	p.Pattern[VERSE].SetTempo(150)
 
-	p.Play()
+	s, err := p.Sequencer()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = s.Play()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s.Tempo(140.9)
+
+	s.Volume(127)
 
 	// p.Next()
 	// p.Next(2)
@@ -94,5 +130,5 @@ func main() {
 	// p.Stop()
 	// p.Play()
 
-	p.Close()
+	s.Close()
 }
