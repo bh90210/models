@@ -311,9 +311,9 @@ const (
 
 // Project .
 type Project struct {
+	Pattern map[int]*pattern
 	model   model
 	mu      *sync.Mutex
-	Pattern map[int]*pattern
 }
 
 type pattern struct {
@@ -330,6 +330,7 @@ type track struct {
 	Scale  *scale
 	Preset Preset
 	Trig   map[int]*trig
+	mu     *sync.Mutex
 }
 
 type scale struct {
@@ -387,12 +388,12 @@ func NewProject(m model) *Project {
 func (p *Project) InitPattern(position int) {
 	p.mu.Lock()
 	p.Pattern[position] = &pattern{
-		T1: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT1(), Trig: make(map[int]*trig)},
-		T2: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT2(), Trig: make(map[int]*trig)},
-		T3: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT3(), Trig: make(map[int]*trig)},
-		T4: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT4(), Trig: make(map[int]*trig)},
-		T5: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT5(), Trig: make(map[int]*trig)},
-		T6: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT6(), Trig: make(map[int]*trig)},
+		T1: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT1(), Trig: make(map[int]*trig), mu: p.mu},
+		T2: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT2(), Trig: make(map[int]*trig), mu: p.mu},
+		T3: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT3(), Trig: make(map[int]*trig), mu: p.mu},
+		T4: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT4(), Trig: make(map[int]*trig), mu: p.mu},
+		T5: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT5(), Trig: make(map[int]*trig), mu: p.mu},
+		T6: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT6(), Trig: make(map[int]*trig), mu: p.mu},
 	}
 	p.mu.Unlock()
 }
@@ -476,7 +477,9 @@ func (t *track) CopyTrack(src *track) {
 // All triggers need to be initiated first so the appropriate memeroy allocation takes place.
 // If you do not init your trigs you will get panic: runtime error.
 func (t *track) InitTrig(position int) {
+	t.mu.Lock()
 	t.Trig[position] = &trig{&note{C4, 4, 126}, &Lock{}}
+	t.mu.Unlock()
 }
 
 // SetMod Mode can be set to either PTN (pattern) or TRK (track). In PTN mode all tracks share the same
