@@ -312,6 +312,7 @@ const (
 // Project .
 type Project struct {
 	model   model
+	mu      *sync.Mutex
 	Pattern map[int]*pattern
 }
 
@@ -332,7 +333,6 @@ type track struct {
 }
 
 type scale struct {
-	// Cycle manual '9.11 Scale Menu'.
 	mod scaleMode
 	len int
 	scl float64
@@ -360,6 +360,7 @@ type Lock struct {
 	Machine machine
 }
 
+// Sequencer .
 type Sequencer struct {
 	*Project
 	// midi fields
@@ -378,22 +379,22 @@ type Sequencer struct {
 // NewProject initiates and returns a *Project struct.
 // TODO: better documentation
 func NewProject(m model) *Project {
-	return &Project{model: m, Pattern: make(map[int]*pattern)}
+	return &Project{model: m, Pattern: make(map[int]*pattern), mu: &sync.Mutex{}}
 }
 
 // InitPattern initiates a new pattern for the selected position.
 // The equivalent of storing a pattern on ie. T1 trig 1.
-func (p *Project) InitPattern(position int) error {
+func (p *Project) InitPattern(position int) {
+	p.mu.Lock()
 	p.Pattern[position] = &pattern{
-		T1: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT1(), Trig: make(map[int]*trig)},
-		T2: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT2(), Trig: make(map[int]*trig)},
-		T3: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT3(), Trig: make(map[int]*trig)},
-		T4: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT4(), Trig: make(map[int]*trig)},
-		T5: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT5(), Trig: make(map[int]*trig)},
-		T6: &track{Scale: &scale{PTN, 15, 4, 0}, Preset: defaultT6(), Trig: make(map[int]*trig)},
+		T1: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT1(), Trig: make(map[int]*trig)},
+		T2: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT2(), Trig: make(map[int]*trig)},
+		T3: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT3(), Trig: make(map[int]*trig)},
+		T4: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT4(), Trig: make(map[int]*trig)},
+		T5: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT5(), Trig: make(map[int]*trig)},
+		T6: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT6(), Trig: make(map[int]*trig)},
 	}
-
-	return nil
+	p.mu.Unlock()
 }
 
 func (p *Project) Sequencer() (*Sequencer, error) {

@@ -104,6 +104,7 @@ func main() {
 	p.Pattern[VERSE].CopyPattern(p.Pattern[INTRO])
 	p.Pattern[VERSE].SetTempo(150)
 
+	// sequencer
 	s, err := p.Sequencer()
 	if err != nil {
 		log.Fatal(err)
