@@ -4,7 +4,7 @@
 
 # elektron:models
 
-A Go package for programmatically interaction with [elektron](https://www.elektron.se/)'s **model:cycles** & **model:samples** via midi.
+A Go package to programmatically with [elektron](https://www.elektron.se/)'s **model:cycles** & **model:samples** via midi.
 
 _WARNING: still in active development, things might not work, things might change._
 

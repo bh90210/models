@@ -13,6 +13,16 @@ const (
 	OUTRO
 )
 
+type prelock int
+
+func (p *prelock) NewPreset() map[em.Parameter]int8 {
+	return nil
+}
+
+func (p *prelock) NewLock() (map[em.Parameter]int8, em.Machine) {
+	return nil, 0
+}
+
 func main() {
 	// preset
 	preset := make(em.Preset)
@@ -42,7 +52,7 @@ func main() {
 	preset[em.GATE] = 0
 
 	// lock
-	lock := new(em.Lock)
+	lock := new(em.lock)
 	lock.Preset = preset
 	lock.Machine = em.METAL
 
@@ -52,6 +62,14 @@ func main() {
 	// start a new project
 	p := em.NewProject(em.CYCLES)
 
+	// test
+	p.Sequencer().CopyPattern(CHORUS, VERSE)
+	p.Sequencer().Pattern(INTRO)
+
+	p.Sequencer().Pattern(INTRO).Track(em.T1)
+
+	p.Pattern(INTRO).Track(em.T1).SetScale(em.PTN, 16, 1.0, 8)
+
 	// pattern
 	p.InitPattern(INTRO)
 	p0 := p.Pattern[INTRO]
@@ -59,7 +77,9 @@ func main() {
 
 	// track
 	p0.T1.SetScale(em.PTN, 8, 1.0, 0)
-	p0.T1.Preset = preset
+	// p0.T1.Preset = preset
+	var t prelock
+	p0.T1.SetPreset(t.NewPreset())
 	p0.T1.InitTrig(0)
 	p0.T1.InitTrig(2)
 	p0.T1.InitTrig(4)
@@ -75,7 +95,8 @@ func main() {
 
 	// preset
 	p0.T1.Preset = preset
-	p0.T1.Preset.Parameter(em.COLOR, 120)
+	p0.T1.Preset.SetParameter(em.COLOR, 120)
+	p0.T1.Preset.DelParameter(em.COLOR)
 
 	// trig
 	p0.T1.Trig[0].SetNote(em.A4, 0.4, 127)

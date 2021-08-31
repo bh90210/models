@@ -1,16 +1,13 @@
 package elektronmodels
 
 import (
-	"fmt"
 	"log"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"gitlab.com/gomidi/midi"
 	"gitlab.com/gomidi/midi/writer"
-	driver "gitlab.com/gomidi/rtmididrv"
 )
 
 type model string
@@ -177,10 +174,10 @@ const (
 	Bf8 notes = As8
 )
 
-type Chords int8
+type chords int8
 
 const (
-	Unisonx2 Chords = iota
+	Unisonx2 chords = iota
 	Unisonx3
 	Unisonx4
 	Minor
@@ -220,49 +217,49 @@ const (
 	Fifths
 )
 
-type Parameter int8
+type parameter int8
 
 const (
-	NOTE       Parameter = 3
-	TRACKLEVEL Parameter = 17
-	MUTE       Parameter = 94
-	PAN        Parameter = 10
-	SWEEP      Parameter = 18
-	CONTOUR    Parameter = 19
-	DELAY      Parameter = 12
-	REVERB     Parameter = 13
-	VOLUMEDIST Parameter = 7
-	SWING      Parameter = 15
-	CHANCE     Parameter = 14
+	NOTE       parameter = 3
+	TRACKLEVEL parameter = 17
+	MUTE       parameter = 94
+	PAN        parameter = 10
+	SWEEP      parameter = 18
+	CONTOUR    parameter = 19
+	DELAY      parameter = 12
+	REVERB     parameter = 13
+	VOLUMEDIST parameter = 7
+	SWING      parameter = 15
+	CHANCE     parameter = 14
 
 	// model:cycles
-	MACHINE     Parameter = 64
-	CYCLESPITCH Parameter = 65
-	DECAY       Parameter = 80
-	COLOR       Parameter = 16
-	SHAPE       Parameter = 17
-	PUNCH       Parameter = 66
-	GATE        Parameter = 67
+	MACHINE     parameter = 64
+	CYCLESPITCH parameter = 65
+	DECAY       parameter = 80
+	COLOR       parameter = 16
+	SHAPE       parameter = 17
+	PUNCH       parameter = 66
+	GATE        parameter = 67
 
 	// model:samples
-	PITCH        Parameter = 16
-	SAMPLESTART  Parameter = 19
-	SAMPLELENGTH Parameter = 20
-	CUTOFF       Parameter = 74
-	RESONANCE    Parameter = 71
-	LOOP         Parameter = 17
-	REVERSE      Parameter = 18
+	PITCH        parameter = 16
+	SAMPLESTART  parameter = 19
+	SAMPLELENGTH parameter = 20
+	CUTOFF       parameter = 74
+	RESONANCE    parameter = 71
+	LOOP         parameter = 17
+	REVERSE      parameter = 18
 )
 
 const (
-	DELAYTIME Parameter = iota + 85
+	DELAYTIME parameter = iota + 85
 	DELAYFEEDBACK
 	REVERBSIZE
 	REVERBTONE
 )
 
 const (
-	LFOSPEED Parameter = iota + 102
+	LFOSPEED parameter = iota + 102
 	LFOMULTIPIER
 	LFOFADE
 	LFODEST
@@ -274,10 +271,10 @@ const (
 
 // ??
 // const (
-// 	LNONE  Parameter = 0
-// 	LPITCH Parameter = 9
+// 	LNONE  parameter = 0
+// 	LPITCH parameter = 9
 
-// 	LCOLOR Parameter = iota + 9
+// 	LCOLOR parameter = iota + 9
 // 	LSHAPE
 // 	LSWEEP
 // 	LCONTOUR
@@ -311,26 +308,44 @@ const (
 
 // Project .
 type Project struct {
-	Pattern map[int]*pattern
-	model   model
-	mu      *sync.Mutex
+	// Pattern map[int]*pattern
+	model
+	sequencer
+}
+
+// Sequencer .
+type sequencer struct {
+	fillMode bool
+
+	// midi fields
+	drv midi.Driver
+	in  midi.In
+	out midi.Out
+	wr  *writer.Writer
+
+	pattern map[int]*pattern
+
+	// playtime fields
+	tempo          chan float64
+	patternLength  int
+	patternRunning int
 }
 
 type pattern struct {
-	T1    *track
-	T2    *track
-	T3    *track
-	T4    *track
-	T5    *track
-	T6    *track
-	tempo float64
+	track map[voice]*track
+	// T1     *track
+	// T2     *track
+	// T3     *track
+	// T4     *track
+	// T5     *track
+	// T6     *track
+	// tempo float64
 }
 
 type track struct {
-	Scale  *scale
-	Preset Preset
-	Trig   map[int]*trig
-	mu     *sync.Mutex
+	*scale
+	preset
+	trig map[int]*trig
 }
 
 type scale struct {
@@ -338,14 +353,19 @@ type scale struct {
 	len int
 	scl float64
 	chg int8
+
+	tempo float64
 }
 
-// Preset .
-type Preset map[Parameter]int8
+type preset map[parameter]int8
+
+// type preset struct {
+// 	parameter map[Parameter]int8
+// }
 
 type trig struct {
-	Note *note
-	Lock *Lock
+	*note
+	*lock
 }
 
 type note struct {
@@ -354,132 +374,146 @@ type note struct {
 	velocity int8
 }
 
-// Lock .
-type Lock struct {
+type lock struct {
 	// conditional *Condition
-	Preset  Preset
-	Machine machine
+	// parameter, preset, machine preset
+	// machine           Machine
+	preset
 }
 
-// Sequencer .
-type Sequencer struct {
-	*Project
-	// midi fields
-	drv midi.Driver
-	mu  *sync.Mutex
-	in  midi.In
-	out midi.Out
-	wr  *writer.Writer
-
-	// playtime fields
-	tempo          chan float64
-	patternLength  int
-	patternRunning int
-}
+var mu *sync.Mutex
 
 // NewProject initiates and returns a *Project struct.
 // TODO: better documentation
 func NewProject(m model) *Project {
-	return &Project{model: m, Pattern: make(map[int]*pattern), mu: &sync.Mutex{}}
+
+	// func (p *Project) initMidi() error {
+	// 	drv, err := driver.New()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	sequencer := &sequencer{
+	// 		drv: drv,
+	// 		// mu:  p.mu,
+	// 	}
+
+	// 	// find elektron and assign it to in/out
+	// 	var helperIn, helperOut bool
+	// 	mu.Lock()
+	// 	ins, _ := drv.Ins()
+	// 	for _, in := range ins {
+	// 		if strings.Contains(in.String(), string(p.model)) {
+	// 			sequencer.in = in
+	// 			helperIn = true
+	// 		}
+	// 	}
+	// 	outs, _ := drv.Outs()
+	// 	for _, out := range outs {
+	// 		if strings.Contains(out.String(), string(p.model)) {
+	// 			sequencer.out = out
+	// 			helperOut = true
+	// 		}
+	// 	}
+	// 	// check if nothing found
+	// 	if !helperIn && !helperOut {
+	// 		return nil, fmt.Errorf("device %s not found", p.model)
+	// 	}
+
+	// 	err = sequencer.in.Open()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	err = sequencer.out.Open()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	wr := writer.New(sequencer.out)
+	// 	sequencer.wr = wr
+	// 	mu.Unlock()
+
+	// 	return sequencer, nil
+	// }
+	mu = new(sync.Mutex)
+	return &Project{model: m, pattern: make(map[int]*pattern)}
 }
 
 // InitPattern initiates a new pattern for the selected position.
 // The equivalent of storing a pattern on ie. T1 trig 1.
-func (p *Project) InitPattern(position int) {
-	p.mu.Lock()
-	p.Pattern[position] = &pattern{
-		T1: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT1(), Trig: make(map[int]*trig), mu: p.mu},
-		T2: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT2(), Trig: make(map[int]*trig), mu: p.mu},
-		T3: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT3(), Trig: make(map[int]*trig), mu: p.mu},
-		T4: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT4(), Trig: make(map[int]*trig), mu: p.mu},
-		T5: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT5(), Trig: make(map[int]*trig), mu: p.mu},
-		T6: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT6(), Trig: make(map[int]*trig), mu: p.mu},
-	}
-	p.mu.Unlock()
-}
+// func (p *Project) InitPattern(position int) {
+// 	mu.Lock()
+// 	p.Pattern[position] = &pattern{
+// 		T1: &track{
+// 			Scale:  &scale{PTN, 15, 4.0, 0},
+// 			Preset: defaultT1(),
+// 			Trig:   make(map[int]*trig),
+// 		},
+// 		T2: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT2(), Trig: make(map[int]*trig)},
+// 		T3: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT3(), Trig: make(map[int]*trig)},
+// 		T4: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT4(), Trig: make(map[int]*trig)},
+// 		T5: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT5(), Trig: make(map[int]*trig)},
+// 		T6: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT6(), Trig: make(map[int]*trig)},
+// 	}
+// 	mu.Unlock()
+// }
 
-func (p *Project) Sequencer() (*Sequencer, error) {
-	mu := &sync.Mutex{}
-	drv, err := driver.New()
-	if err != nil {
-		return nil, err
-	}
-
-	sequencer := &Sequencer{
-		drv: drv,
-		mu:  mu,
-	}
-
-	// find elektron and assign it to in/out
-	var helperIn, helperOut bool
-	mu.Lock()
-	ins, _ := drv.Ins()
-	for _, in := range ins {
-		if strings.Contains(in.String(), string(p.model)) {
-			sequencer.in = in
-			helperIn = true
-		}
-	}
-	outs, _ := drv.Outs()
-	for _, out := range outs {
-		if strings.Contains(out.String(), string(p.model)) {
-			sequencer.out = out
-			helperOut = true
-		}
-	}
-	// check if nothing found
-	if !helperIn && !helperOut {
-		return nil, fmt.Errorf("device %s not found", p.model)
-	}
-
-	err = sequencer.in.Open()
-	if err != nil {
-		return nil, err
-	}
-
-	err = sequencer.out.Open()
-	if err != nil {
-		return nil, err
-	}
-
-	wr := writer.New(sequencer.out)
-	sequencer.wr = wr
-	mu.Unlock()
-
-	return sequencer, nil
+func (p *Project) Sequencer() *sequencer {
+	return &p.sequencer
 }
 
 // CopyPattern copies the input source pattern to caller destination.
-func (p *pattern) CopyPattern(src *pattern) {
-	*p = *src
+func (s *sequencer) CopyPattern(src, dst int) *sequencer {
+	s.pattern[dst] = s.pattern[src]
+	return s
+}
+
+// Pattern returns the specified pattern out of project's pattern collection.
+// Allows to access pattern's methods.
+func (s *sequencer) Pattern(pos int) *pattern {
+	return s.pattern[pos]
 }
 
 // SetTempo .
-func (p *pattern) SetTempo(tempo float64) {
+func (p *pattern) SetTempo(tempo float64) *pattern {
 	p.tempo = tempo
+	return p
+}
+
+// CopyTrack copies a track from input source to caller destination.
+func (p *pattern) CopyTrack(src, dst voice) *pattern {
+	p.track[dst] = p.track[src]
+	return p
+}
+
+func (p *pattern) Track(id voice) *track {
+	return p.track[id]
 }
 
 // SetScale sets a new scale for the track.
 // If not set a default one is used.
-func (t *track) SetScale(mod scaleMode, length int, scl float64, chg int8) {
-	t.Scale.mod = mod
-	t.Scale.len = length
-	t.Scale.scl = scl
-	t.Scale.chg = chg
-}
-
-// CopyTrack copies a track from input source to caller destination.
-func (t *track) CopyTrack(src *track) {
-	*t = *src
+func (t *track) SetScale(mod scaleMode, length int, scl float64, chg int8) *track {
+	t.mod = mod
+	t.len = length
+	t.scl = scl
+	t.chg = chg
+	return t
 }
 
 // InitTrig initiates a trigger note and places it to designated position of trigs map (map[int]*trig).
 // All triggers need to be initiated first so the appropriate memeroy allocation takes place.
 // If you do not init your trigs you will get panic: runtime error.
 func (t *track) InitTrig(position int) {
-	t.mu.Lock()
-	t.Trig[position] = &trig{&note{C4, 4, 126}, &Lock{}}
-	t.mu.Unlock()
+	mu.Lock()
+	t.Trig[position] = &trig{&note{C4, 4, 126}, &lock{}}
+	mu.Unlock()
+}
+
+func (t *track) SetPreset(preset preset) {
+	mu.Lock()
+	// t.Trig[position] = &trig{&note{C4, 4, 126}, &lock{}}
+	mu.Unlock()
 }
 
 // SetMod Mode can be set to either PTN (pattern) or TRK (track). In PTN mode all tracks share the same
@@ -508,20 +542,35 @@ func (s *scale) SetChg(chg int8) {
 	s.chg = chg
 }
 
-// SetParameter .
-func (p Preset) Parameter(parameter Parameter, value int8) {
-	p[parameter] = value
+// SetParameter assigned a parameter to the preset.
+// First argument is a Parameter type and second value an int8.
+func (p *track) SetParameter(parameter parameter, value int8) {
+	mu.Lock()
+	p.preset[parameter] = value
+	mu.Unlock()
+}
+
+// SetParameter assigned a parameter to the preset.
+// First argument is a Parameter type and second value an int8.
+func (p *track) DelParameter(parameter parameter) {
+	mu.Lock()
+	delete(p.preset, parameter)
+	mu.Unlock()
 }
 
 // SetNote .
 func (t *trig) SetNote(key notes, length float64, velocity int8) {
-	t.Note.key = key
-	t.Note.length = length
-	t.Note.velocity = velocity
+	t.key = key
+	t.length = length
+	t.velocity = velocity
 }
 
 // CopyTrig .
 func (t *trig) CopyTrig(src *trig) {
+	*t = *src
+}
+
+func (t *trig) ClearTrig(src *trig) {
 	*t = *src
 }
 
@@ -548,11 +597,19 @@ func (n *note) CopyNote(src *note) {
 }
 
 // SetMachine .
-func (l *Lock) SetMachine(m machine) {
-	l.Machine = m
+func (l *lock) SetMachine(m machine) {
+	// l.lockMachine = lockMachine
+	// l.Machine = m
 }
 
-func (p *Sequencer) Play(position ...int) error {
+func (l *lock) setMachine(m machine) {
+	// var tt lockMachine
+	// tt = m
+	// l = m
+	// l.Machine = m
+}
+
+func (p *sequencer) Play(position ...int) error {
 	// check for errors in current pattern
 
 	// check for warnings of the existing and incoming patterns
@@ -629,103 +686,103 @@ func (p *Sequencer) Play(position ...int) error {
 // Next 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
 // if used and not found, an empty default pattern should be returned - silence
 // Second number indicates jump to specific pattern number rather the next in line.
-func (p *Sequencer) Next(patternNumber ...int) {
+func (p *sequencer) Next(patternNumber ...int) {
 
 }
 
 // Pause .
-func (p *Sequencer) Pause() {
+func (p *sequencer) Pause() {
 
 }
 
 // Stop .
-func (p *Sequencer) Stop() {
+func (p *sequencer) Stop() {
 
 }
 
-func (p *Sequencer) Tempo(bpm float64) {
+func (p *sequencer) Tempo(bpm float64) {
 
 }
 
 // SetVolume .
-func (p *Sequencer) Volume(value int8) {
+func (p *sequencer) Volume(value int8) {
 
 }
 
 // Close midi connection.
-func (p *Sequencer) Close() {
+func (p *sequencer) Close() {
 	p.out.Close()
 }
 
-func (p *Sequencer) noteon(t voice, n notes, vel int8) {
-	p.mu.Lock()
+func (p *sequencer) noteon(t voice, n notes, vel int8) {
+	mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.NoteOn(p.wr, uint8(n), uint8(vel))
-	p.mu.Unlock()
+	mu.Unlock()
 }
 
-func (p *Sequencer) noteoff(t voice, n notes) {
-	p.mu.Lock()
+func (p *sequencer) noteoff(t voice, n notes) {
+	mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.NoteOff(p.wr, uint8(n))
-	p.mu.Unlock()
+	mu.Unlock()
 }
 
-func (p *Sequencer) cc(t voice, par Parameter, val int8) {
-	p.mu.Lock()
+func (p *sequencer) cc(t voice, par parameter, val int8) {
+	mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.ControlChange(p.wr, uint8(par), uint8(val))
-	p.mu.Unlock()
+	mu.Unlock()
 }
 
-func (p *Sequencer) pc(t voice, pc int8) {
-	p.mu.Lock()
+func (p *sequencer) pc(t voice, pc int8) {
+	mu.Lock()
 	p.wr.SetChannel(uint8(t))
 	writer.ProgramChange(p.wr, uint8(pc))
-	p.mu.Unlock()
+	mu.Unlock()
 }
 
-func (p *Sequencer) unlockPreset() {
+func (p *sequencer) unlockPreset() {
 
 }
 
-func (p *Sequencer) unlockMachine() {
+func (p *sequencer) unlockMachine() {
 
 }
 
 // default presets for voices 1-6
-func defaultT1() Preset {
-	d := make(map[Parameter]int8)
+func defaultT1() preset {
+	p := make(map[parameter]int8)
+	p[COLOR] = 10
+	return p
+}
+
+func defaultT2() preset {
+	d := make(map[parameter]int8)
 	d[COLOR] = 10
 	return d
 }
 
-func defaultT2() Preset {
-	d := make(map[Parameter]int8)
+func defaultT3() preset {
+	d := make(map[parameter]int8)
 	d[COLOR] = 10
 	return d
 }
 
-func defaultT3() Preset {
-	d := make(map[Parameter]int8)
+func defaultT4() preset {
+	d := make(map[parameter]int8)
 	d[COLOR] = 10
 	return d
 }
 
-func defaultT4() Preset {
-	d := make(map[Parameter]int8)
+func defaultT5() preset {
+	d := make(map[parameter]int8)
 	d[COLOR] = 10
 	return d
 }
 
-func defaultT5() Preset {
-	d := make(map[Parameter]int8)
-	d[COLOR] = 10
-	return d
-}
-
-func defaultT6() Preset {
-	d := make(map[Parameter]int8)
-	d[COLOR] = 10
-	return d
+func defaultT6() preset {
+	p := make(preset)
+	p[COLOR] = 10
+	return p
 }

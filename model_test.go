@@ -15,12 +15,12 @@ func TestNewProject(t *testing.T) {
 	}
 
 	// Without p.InitPattern(0)
-	p.mu.Lock()
+	mu.Lock()
 	pat1 := p.Pattern[0]
 	if pat1 != nil {
 		t.Errorf("got %v want nil", pat1)
 	}
-	p.mu.Unlock()
+	mu.Unlock()
 
 	pat2 := new(pattern)
 	if pat2.tempo != 0 {
@@ -53,11 +53,11 @@ func TestInitPattern(t *testing.T) {
 	// nil trig
 	wantMap := make(map[int]*trig)
 
-	p.mu.Lock()
+	mu.Lock()
 	if len(p.Pattern[0].T1.Trig) != len(wantMap) {
 		t.Errorf("got %v want %v", p.Pattern[0].T1.Trig, wantMap)
 	}
-	p.mu.Unlock()
+	mu.Unlock()
 }
 
 // TestInitTrig evaluates trigger initialization.
@@ -67,12 +67,12 @@ func TestInitTrig(t *testing.T) {
 	p.InitPattern(1)
 	p.Pattern[1].T1.InitTrig(0)
 
-	want := &trig{&note{C4, 4, 126}, &Lock{}}
-	p.mu.Lock()
+	want := &trig{&note{C4, 4, 126}, &lock{}}
+	mu.Lock()
 	if *p.Pattern[1].T1.Trig[0].Note != *want.Note {
 		t.Errorf("got %v want %v", *p.Pattern[1].T1.Trig[0], *want)
 	}
-	p.mu.Unlock()
+	mu.Unlock()
 }
 
 // TestSequencer evaluates sequencer's init/play/stop/next
