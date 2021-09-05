@@ -7,55 +7,55 @@ package elektronmodels
 func defaultPreset(id voice) preset {
 	switch id {
 	case T1:
-		return pT1()
+		return PT1()
 	case T2:
-		return pT2()
+		return PT2()
 	case T3:
-		return pT3()
+		return PT3()
 	case T4:
-		return pT4()
+		return PT4()
 	case T5:
-		return pT5()
+		return PT5()
 	case T6:
-		return pT6()
+		return PT6()
 
 	}
 
 	return nil
 }
 
-func pT1() preset {
+func PT1() preset {
 	p := make(map[Parameter]int8)
-	p[COLOR] = 10
+	p[MACHINE] = int8(KICK)
 	return p
 }
 
-func pT2() preset {
-	d := make(map[Parameter]int8)
-	d[COLOR] = 10
-	return d
+func PT2() preset {
+	p := PT1()
+	p[MACHINE] = int8(SNARE)
+	return p
 }
 
-func pT3() preset {
-	d := make(map[Parameter]int8)
-	d[COLOR] = 10
-	return d
+func PT3() preset {
+	p := PT1()
+	p[MACHINE] = int8(METAL)
+	return p
 }
 
-func pT4() preset {
-	d := make(map[Parameter]int8)
-	d[COLOR] = 10
-	return d
+func PT4() preset {
+	p := PT1()
+	p[MACHINE] = int8(PERC)
+	return p
 }
 
-func pT5() preset {
-	d := make(map[Parameter]int8)
-	d[COLOR] = 10
-	return d
+func PT5() preset {
+	p := PT1()
+	p[MACHINE] = int8(TONE)
+	return p
 }
 
-func pT6() preset {
-	p := make(preset)
-	p[COLOR] = 10
+func PT6() preset {
+	p := PT1()
+	p[MACHINE] = int8(CHORD)
 	return p
 }
