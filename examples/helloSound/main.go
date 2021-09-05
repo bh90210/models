@@ -20,8 +20,12 @@ func main() {
 	defer p.Close()
 
 	p.Pattern(INTRO).
-		Scale(15, 1.0, 0).
+		Scale(15, 4.0, 2).
 		Tempo(125.0)
+
+	p.Pattern(INTRO).Track(em.T1).Scale(15, 1.0)
+
+	p.Pattern(INTRO).Track(em.T1).Trig(1).Scale(2.5)
 
 	// kick
 	kick := []int{0, 4, 8, 12}
@@ -29,13 +33,13 @@ func main() {
 		p.Pattern(INTRO).Track(em.T1).Trig(v)
 	}
 
-	// // snare
+	// snare
 	snare := []int{4, 12}
 	for _, v := range snare {
 		p.Pattern(INTRO).Track(em.T2).Trig(v)
 	}
 
-	// // hi-hat
+	// hi-hat
 	for i := 0; i <= 15; i++ {
 		p.Pattern(INTRO).Track(em.T3).Trig(i)
 	}

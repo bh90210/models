@@ -555,14 +555,14 @@ func (s *sequencer) Pattern(id int) *pattern {
 	if _, ok := s.pattern[id]; !ok {
 		s.pattern[id] = &pattern{
 			track: make(map[voice]*track),
-			scale: &scale{15, 1.0, 0},
+			scale: &scale{15, 1.0, 15},
 		}
 	}
 
 	return s.pattern[id]
 }
 
-// Close midi connection.
+// Close midi connection. Use it with defer after creating a new project.
 func (s *sequencer) Close() {
 	s.in.Close()
 	s.out.Close()
@@ -662,10 +662,8 @@ func (p *pattern) Track(id voice) *track {
 
 // SetScale sets a new scale for the track.
 // If not set a default one is used.
-func (t *track) Scale(length int, scale float64, change int8) *track {
-	t.scale.length = length
-	t.scale.scale = scale
-	t.scale.change = change
+func (t *track) Scale(length int, factor float64) *track {
+	t.scale = &scale{length: length, scale: factor}
 	return t
 }
 
@@ -695,13 +693,13 @@ func (t *track) Trig(id int) *trig {
 // scale
 //
 
-// SetLen sets the step length (amount of steps) of the pattern/track.
+// Length sets the step length (amount of steps) of the pattern/track.
 func (s *scale) Length(length int) *scale {
 	s.length = length
 	return s
 }
 
-// SetScl controls the speed the playback in multiples of the current tempo. It offers seven possible
+// Scale controls the speed the playback in multiples of the current tempo. It offers seven possible
 // settings, 1/8X, 1/4X, 1/2X, 3/4X, 1X, 3/2X and 2X. A setting of 1/8X plays back the pattern at one-eighth of
 // the set tempo. 3/4X plays the pattern back at three-quarters of the tempo; 3/2X plays back the pattern
 // twice as fast as the 3/4X setting. 2X makes the pattern play at twice the BPM.
@@ -710,21 +708,13 @@ func (s *scale) Scale(scl float64) *scale {
 	return s
 }
 
-// SetChg controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
+// Change controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
 // regarding cueing and chaining. If CHG is set to OFF, the default change length is INF (infinite) in TRACK
 // mode and the same value as LEN in PATTERN mode.
 func (s *scale) Change(chg int8) *scale {
 	s.change = chg
 	return s
 }
-
-// InitTrig initiates a trigger note and places it to designated position of trigs map (map[int]*trig).
-// All triggers need to be initiated first so the appropriate memeroy allocation takes place.
-// If you do not init your trigs you will get panic: runtime error.
-
-//
-// preset
-//
 
 //
 // trig
@@ -742,23 +732,28 @@ func (t *trig) Note(key notes, length float64, velocity int8) {
 	t.note.velocity = velocity
 }
 
+func (t *trig) Scale(factor float64) *trig {
+	t.scale = &scale{scale: factor}
+	return t
+}
+
 //
 // note
 //
 
-// SetKey .
+// Key .
 func (n *note) Key(key notes) {
 	n.key = key
 }
 
-// SetLength Trig Length sets the duration of the notes. When a note has finished playing a NOTE OFF command
+// Length Trig Length sets the duration of the notes. When a note has finished playing a NOTE OFF command
 // is sent. The INF setting equals infinite note length. This parameter only applies if GATE is set to ON or
 // when sending trig length data over MIDI. (0.125–128, INF)
 func (n *note) Length(length float64) {
 	n.length = length
 }
 
-// SetVelocity .
+// Velocity .
 func (n *note) Velocity(velocity int8) {
 	n.velocity = velocity
 }
