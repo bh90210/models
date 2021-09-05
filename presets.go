@@ -18,9 +18,7 @@ func defaultPreset(id voice) preset {
 		return PT5()
 	case T6:
 		return PT6()
-
 	}
-
 	return nil
 }
 
