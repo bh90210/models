@@ -277,7 +277,7 @@ const (
 type machine int8
 
 const (
-	KICK machine = iota + 1
+	KICK machine = iota
 	SNARE
 	METAL
 	PERC
@@ -351,6 +351,7 @@ type trig struct {
 	note *note
 	lock preset
 
+	scale *scale
 	// nudge float64
 	// condition float64
 }
@@ -461,43 +462,63 @@ func (s *sequencer) Play(ids ...int) {
 
 	// check tempo
 
-	var count int
+	// var count int
 
-	tick := time.NewTicker(
-		time.Duration(60000/(s.pattern[id].tempo*s.pattern[id].scale.scale)) * time.Millisecond)
-	go func() {
-	loop:
-		for {
-			select {
-			case newTempo := <-s.tempo:
-				tick.Reset(time.Duration(60000/(newTempo*s.pattern[id].scale.scale)) * time.Millisecond)
-			case <-tick.C:
-				if count > s.pattern[id].scale.length {
-					count = 0
-				}
+	for i := 0; i <= 5; i++ {
+		voice := voice(i)
+		if track, ok := s.pattern[id].track[voice]; ok {
+			tick := time.NewTicker(
+				time.Duration(60000/(pattern.tempo*pattern.scale.scale)) * time.Millisecond)
 
-				for i := 0; i <= 5; i++ {
-					// trigger
-					if s.pattern[id].track[voice(i)].trig[count] == nil {
-						continue
+			go func() {
+				var count int
+
+				go func() {
+					// check if track has preset
+					// if not set default preset for track
+					if len(track.preset) == 0 {
+						track.preset = defaultPreset(voice)
 					}
 
-					s.noteon(voice(i),
-						s.pattern[id].track[voice(i)].trig[count].note.key,
-						s.pattern[id].track[voice(i)].trig[count].note.velocity)
-					// go func() {
-					// 	time.Sleep(time.Millisecond * time.Duration(s.pattern[id].track[voice(i)].trig[count].note.length))
-					// 	s.noteoff(voice(i), s.pattern[id].track[voice(i)].trig[count].note.key)
-					// }()
-					fmt.Println(voice(i))
+					// apply preset
+					for parameter, value := range track.preset {
+						s.cc(voice, parameter, value)
+					}
+				}()
+
+			loop:
+				for {
+					select {
+					case newTempo := <-s.tempo:
+						tick.Reset(time.Duration(60000/(newTempo*pattern.scale.scale)) * time.Millisecond)
+					case <-tick.C:
+						if count > s.pattern[id].scale.length {
+							count = 0
+						}
+
+						if trig, ok := track.trig[count]; ok {
+							s.noteon(voice,
+								trig.note.key,
+								trig.note.velocity)
+							go func() {
+								time.Sleep(time.Millisecond * time.Duration(trig.note.length))
+								s.noteoff(voice, trig.note.key)
+							}()
+							// fmt.Println("----new----")
+							// fmt.Println("track: ", voice)
+							// fmt.Println("trig: ", count)
+							// fmt.Println()
+						}
+
+						count++
+
+					case <-s.pause:
+						break loop
+					}
 				}
-				// fmt.Println(count)
-				count++
-			case <-s.pause:
-				break loop
-			}
+			}()
 		}
-	}()
+	}
 
 	block := make(chan bool)
 	<-block
@@ -531,7 +552,7 @@ func (s *sequencer) Chain(patterns ...int) *sequencer {
 // Pattern returns the specified pattern out of project's pattern collection.
 // Allows to access pattern's methods.
 func (s *sequencer) Pattern(id int) *pattern {
-	if s.pattern[id] == nil {
+	if _, ok := s.pattern[id]; !ok {
 		s.pattern[id] = &pattern{
 			track: make(map[voice]*track),
 			scale: &scale{15, 1.0, 0},
@@ -576,20 +597,14 @@ func (s *sequencer) pc(t voice, pc int8) {
 	mu.Unlock()
 }
 
-func (s *sequencer) unlock() {
-
-}
-
 //
 // free
 //
 
-func (f *free) CC(t voice, par Parameter, val int8) {
-	f.midi.cc(t, par, val)
-}
-
-func (f *free) PC(t voice, pc int8) {
-	f.midi.pc(t, pc)
+func (f *free) Preset(track voice, preset preset) {
+	for parameter, value := range preset {
+		f.midi.cc(track, parameter, value)
+	}
 }
 
 // Note
@@ -600,6 +615,14 @@ func (f *free) Note(track voice, note notes, velocity int8, duration float64) {
 		time.Sleep(time.Millisecond * time.Duration(duration))
 		f.midi.noteoff(track, note)
 	}()
+}
+
+func (f *free) CC(track voice, parameter Parameter, value int8) {
+	f.midi.cc(track, parameter, value)
+}
+
+func (f *free) PC(t voice, pc int8) {
+	f.midi.pc(t, pc)
 }
 
 //
@@ -622,9 +645,9 @@ func (p *pattern) Tempo(tempo float64) *pattern {
 }
 
 func (p *pattern) Track(id voice) *track {
-	if p.track[id] == nil {
+	if _, ok := p.track[id]; !ok {
 		p.track[id] = &track{
-			scale:  &scale{length: 15, scale: 1.0},
+			// scale:  &scale{length: 15, scale: 1.0},
 			preset: defaultPreset(id),
 			trig:   make(map[int]*trig),
 		}
@@ -654,16 +677,16 @@ func (t *track) Preset(p preset) *track {
 // SetParameter assigned a parameter to the preset.
 // First argument is a Parameter type and second value an int8.
 func (t *track) Parameter(parameter Parameter, value int8) *track {
-	mu.Lock()
+	// mu.Lock()
 	t.preset[parameter] = value
-	mu.Unlock()
+	// mu.Unlock()
 	return t
 }
 
 func (t *track) Trig(id int) *trig {
-	// mu.Lock()
-	t.trig[id] = &trig{note: &note{C4, 4, 126}}
-	// mu.Unlock()
+	if _, ok := t.trig[id]; !ok {
+		t.trig[id] = &trig{note: &note{C4, 4, 126}}
+	}
 
 	return t.trig[id]
 }
@@ -673,7 +696,7 @@ func (t *track) Trig(id int) *trig {
 //
 
 // SetLen sets the step length (amount of steps) of the pattern/track.
-func (s *scale) Len(length int) *scale {
+func (s *scale) Length(length int) *scale {
 	s.length = length
 	return s
 }
@@ -682,7 +705,7 @@ func (s *scale) Len(length int) *scale {
 // settings, 1/8X, 1/4X, 1/2X, 3/4X, 1X, 3/2X and 2X. A setting of 1/8X plays back the pattern at one-eighth of
 // the set tempo. 3/4X plays the pattern back at three-quarters of the tempo; 3/2X plays back the pattern
 // twice as fast as the 3/4X setting. 2X makes the pattern play at twice the BPM.
-func (s *scale) Scl(scl float64) *scale {
+func (s *scale) Scale(scl float64) *scale {
 	s.scale = scl
 	return s
 }
@@ -690,7 +713,7 @@ func (s *scale) Scl(scl float64) *scale {
 // SetChg controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
 // regarding cueing and chaining. If CHG is set to OFF, the default change length is INF (infinite) in TRACK
 // mode and the same value as LEN in PATTERN mode.
-func (s *scale) Chg(chg int8) *scale {
+func (s *scale) Change(chg int8) *scale {
 	s.change = chg
 	return s
 }

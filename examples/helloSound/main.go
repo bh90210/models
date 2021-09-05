@@ -20,32 +20,43 @@ func main() {
 	defer p.Close()
 
 	p.Pattern(INTRO).
-		Scale(12, 1.0, 0).
+		Scale(15, 1.0, 0).
 		Tempo(125.0)
 
-	// p.Pattern(INTRO).Track(em.T1)
+	// kick
+	kick := []int{0, 4, 8, 12}
+	for _, v := range kick {
+		p.Pattern(INTRO).Track(em.T1).Trig(v)
+	}
 
-	// p.Pattern(INTRO).Track(em.T1)
+	// // snare
+	snare := []int{4, 12}
+	for _, v := range snare {
+		p.Pattern(INTRO).Track(em.T2).Trig(v)
+	}
 
-	p.Pattern(INTRO).Track(em.T1).Trig(0)
-	p.Pattern(INTRO).Track(em.T1).Trig(1)
+	// // hi-hat
+	for i := 0; i <= 15; i++ {
+		p.Pattern(INTRO).Track(em.T3).Trig(i)
+	}
 
-	p.Pattern(INTRO).Track(em.T2).Trig(2)
-	p.Pattern(INTRO).Track(em.T2).Trig(3)
+	// tom
+	tom := []int{2, 3, 6, 7, 10, 11, 14, 15}
+	for _, v := range tom {
+		p.Pattern(INTRO).Track(em.T4).Trig(v)
+	}
 
-	p.Pattern(INTRO).Track(em.T3).Trig(4)
-	p.Pattern(INTRO).Track(em.T3).Trig(5)
+	// tone
+	tone := []int{5, 9, 10}
+	for _, v := range tone {
+		p.Pattern(INTRO).Track(em.T5).Trig(v)
+	}
 
-	p.Pattern(INTRO).Track(em.T4).Trig(6)
-	p.Pattern(INTRO).Track(em.T4).Trig(7)
-
-	p.Pattern(INTRO).Track(em.T5).Trig(8)
-	p.Pattern(INTRO).Track(em.T5).Trig(9)
-
-	p.Pattern(INTRO).Track(em.T6).Trig(10)
-	p.Pattern(INTRO).Track(em.T6).Trig(11)
-
-	// p.Pattern(INTRO).CopyTrack(em.T3, em.T4)
+	// synth
+	synth := []int{3, 7, 9}
+	for _, v := range synth {
+		p.Pattern(INTRO).Track(em.T6).Trig(v)
+	}
 
 	// preset := make(map[em.Parameter]int8)
 	// preset := em.PT1()
