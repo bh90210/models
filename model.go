@@ -2,10 +2,8 @@ package elektronmodels
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"gitlab.com/gomidi/midi"
@@ -236,8 +234,8 @@ const (
 	DELAY      Parameter = 12
 	REVERB     Parameter = 13
 	VOLUMEDIST Parameter = 7
-	SWING      Parameter = 15
-	CHANCE     Parameter = 14
+	// SWING      Parameter = 15
+	// CHANCE     Parameter = 14
 
 	// model:cycles
 	MACHINE     Parameter = 64
@@ -276,29 +274,10 @@ const (
 	LFODEPTH
 )
 
-// ??
-// const (
-// 	LNONE  Parameter = 0
-// 	LPITCH Parameter = 9
-
-// 	LCOLOR Parameter = iota + 9
-// 	LSHAPE
-// 	LSWEEP
-// 	LCONTOUR
-// 	LPAW
-// 	LGATE
-// 	LFTUN
-// 	LDECAY
-// 	LDIST
-// 	LDELAY
-// 	LREVERB
-// 	LPAN
-// )
-
 type machine int8
 
 const (
-	KICK machine = iota + 1
+	KICK machine = iota
 	SNARE
 	METAL
 	PERC
@@ -317,17 +296,16 @@ const (
 // data structures
 //
 
-// Project .
+// Project long description of the data structure, methods, behaviors and useage.
 type Project struct {
 	model
-	sequencer
-	tempo float64
+	*sequencer
+	// Free allows to bypass the sequencer and send triggers in real time.
+	Free *free
 }
 
 // Sequencer .
 type sequencer struct {
-	fillMode bool
-
 	// midi fields
 	drv midi.Driver
 	in  midi.In
@@ -337,35 +315,45 @@ type sequencer struct {
 	pattern map[int]*pattern
 
 	// playtime fields
-	tempo          chan float64
-	patternLength  int
-	patternRunning int
+	tempo  chan float64
+	pause  chan bool
+	chains []int
+	// fillMode chan bool
+	// chances chan float64
+	// swing chan float64
+}
+
+type free struct {
+	midi *sequencer
 }
 
 type pattern struct {
 	track map[voice]*track
+	scale *scale
+	tempo float64
 }
 
 type track struct {
-	*scale
 	preset
-	trig map[int]*trig
+	scale *scale
+	trig  map[int]*trig
 }
 
 type scale struct {
-	mod scaleMode
-	len int
-	scl float64
-	chg int8
-
-	tempo float64
+	length int
+	scale  float64
+	change int8
 }
 
 type preset map[Parameter]int8
 
 type trig struct {
-	*note
+	note *note
 	lock preset
+
+	scale *scale
+	// nudge float64
+	// condition float64
 }
 
 type note struct {
@@ -391,12 +379,13 @@ func NewProject(m model) (*Project, error) {
 	}
 
 	sequencer := &sequencer{
-		drv: drv,
+		drv:   drv,
+		tempo: make(chan float64),
 	}
 
 	// find elektron and assign it to in/out
 	var helperIn, helperOut bool
-	mu.Lock()
+	// mu.Lock()
 	ins, _ := drv.Ins()
 	for _, in := range ins {
 		if strings.Contains(in.String(), string(m)) {
@@ -428,211 +417,242 @@ func NewProject(m model) (*Project, error) {
 
 	wr := writer.New(sequencer.out)
 	sequencer.wr = wr
-	mu.Unlock()
+	// mu.Unlock()
 
-	return &Project{model: m, sequencer: *sequencer, tempo: 120.0}, nil
+	sequencer.pattern = make(map[int]*pattern)
+	sequencer.tempo = make(chan float64)
+
+	return &Project{
+		model:     m,
+		sequencer: sequencer,
+		Free: &free{
+			midi: sequencer,
+		}}, nil
 }
-
-// InitPattern initiates a new pattern for the selected position.
-// The equivalent of storing a pattern on ie. T1 trig 1.
-// func (p *Project) InitPattern(position int) {
-// 	mu.Lock()
-// 	p.Pattern[position] = &pattern{
-// 		T1: &track{
-// 			Scale:  &scale{PTN, 15, 4.0, 0},
-// 			Preset: defaultT1(),
-// 			Trig:   make(map[int]*trig),
-// 		},
-// 		T2: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT2(), Trig: make(map[int]*trig)},
-// 		T3: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT3(), Trig: make(map[int]*trig)},
-// 		T4: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT4(), Trig: make(map[int]*trig)},
-// 		T5: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT5(), Trig: make(map[int]*trig)},
-// 		T6: &track{Scale: &scale{PTN, 15, 4.0, 0}, Preset: defaultT6(), Trig: make(map[int]*trig)},
-// 	}
-// 	mu.Unlock()
-// }
-
-// SetTempo .
-func (p *Project) SetTempo(tempo float64) *Project {
-	p.tempo = tempo
-	return p
-}
-
-// func (p *Project) Close() {
-// 	p.drv.Close()
-// }
 
 //
 // sequencer
 //
 
-func (p *sequencer) Play(position ...int) error {
-	// check for errors in current pattern
+// Play
+// Is blocking
+func (s *sequencer) Play(ids ...int) {
+	// if user did not specify a pattern neither Chain method used, print an error
+	if len(ids) == 0 && len(s.chains) == 0 {
+		fmt.Println("error: no pattern selected")
+		return
+	}
 
-	// check for warnings of the existing and incoming patterns
+	var pattern *pattern
+	var id int = ids[0]
 
-	// analyze scale
+	if len(s.chains) != 0 {
+		pattern = s.pattern[s.chains[0]]
+	} else {
+		pattern = s.pattern[id]
+	}
 
-	// current pattern play
+	// check pattern exists
+	if pattern == nil {
+		fmt.Println("error: pattern does not exist")
+		return
+	}
 
-	var count int64
+	// check tracks for scale settings
+
+	// check tempo
+
+	// var count int
+
+	for i := 0; i <= 5; i++ {
+		voice := voice(i)
+		if track, ok := s.pattern[id].track[voice]; ok {
+			tick := time.NewTicker(
+				time.Duration(60000/(pattern.tempo*pattern.scale.scale)) * time.Millisecond)
+
+			go func() {
+				var count int
+
+				go func() {
+					// check if track has preset
+					// if not set default preset for track
+					if len(track.preset) == 0 {
+						track.preset = defaultPreset(voice)
+					}
+
+					// apply preset
+					for parameter, value := range track.preset {
+						s.cc(voice, parameter, value)
+					}
+				}()
+
+			loop:
+				for {
+					select {
+					case newTempo := <-s.tempo:
+						tick.Reset(time.Duration(60000/(newTempo*pattern.scale.scale)) * time.Millisecond)
+					case <-tick.C:
+						if count > s.pattern[id].scale.length {
+							count = 0
+						}
+
+						if trig, ok := track.trig[count]; ok {
+							s.noteon(voice,
+								trig.note.key,
+								trig.note.velocity)
+							go func() {
+								time.Sleep(time.Millisecond * time.Duration(trig.note.length))
+								s.noteoff(voice, trig.note.key)
+							}()
+							// fmt.Println("----new----")
+							// fmt.Println("track: ", voice)
+							// fmt.Println("trig: ", count)
+							// fmt.Println()
+						}
+
+						count++
+
+					case <-s.pause:
+						break loop
+					}
+				}
+			}()
+		}
+	}
 
 	block := make(chan bool)
-	p.tempo = make(chan float64)
-
-	tick := time.NewTicker(time.Duration(60000/60.0) * time.Millisecond)
-	go func() {
-	loop:
-		for {
-			select {
-			case newTempo := <-p.tempo:
-				tick.Reset(time.Duration(60000/newTempo) * time.Millisecond)
-			case <-tick.C:
-				if count == 2 {
-					tick.Stop()
-					close(p.tempo)
-					// break loop
-					block <- true
-					break loop
-				}
-				log.Println(atomic.AddInt64(&count, 1))
-				p.cc(T1, CYCLESPITCH, 50)
-				p.noteon(T1, E5, 126)
-				time.Sleep(750 * time.Millisecond)
-				p.noteoff(T1, E5)
-			}
-		}
-	}()
-
 	<-block
-
-	return nil
-
-	// for {
-	// 	p.cc(T1, CYCLESPITCH, 50)
-	// 	p.noteon(T1, E5, 126)
-	// 	time.Sleep(750 * time.Millisecond)
-	// 	p.noteoff(T1, E5)
-
-	// 	p.cc(T1, CYCLESPITCH, 70)
-	// 	p.noteon(T1, C4, 127)
-	// 	// p.cc(T1, MACHINE, 1)
-	// 	time.Sleep(500 * time.Millisecond)
-	// 	p.noteoff(T1, C4)
-
-	// 	p.cc(T1, MACHINE, int(rand.Intn(5)))
-	// 	p.cc(T1, CYCLESPITCH, 80)
-	// 	p.noteon(T1, F4, 127)
-	// 	// p.cc(T1, MACHINE, 2)
-	// 	time.Sleep(500 * time.Millisecond)
-	// 	p.noteoff(T1, F4)
-
-	// 	p.cc(T1, MACHINE, 0)
-	// 	// p.cc(T1, CYCLESPITCH, 90)
-	// 	p.cc(T1, CYCLESPITCH, int(rand.Intn(126)))
-	// 	p.cc(T1, DECAY, int(rand.Intn(126)))
-	// 	p.cc(T1, COLOR, int(rand.Intn(126)))
-	// 	p.cc(T1, SHAPE, int(rand.Intn(126)))
-	// 	p.cc(T1, SWEEP, int(rand.Intn(126)))
-	// 	p.cc(T1, CONTOUR, int(rand.Intn(126)))
-	// 	p.noteon(T1, A4, 127)
-	// 	time.Sleep(250 * time.Millisecond)
-	// 	p.noteoff(T1, A4)
-	// }
 }
 
 // Next 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
 // if used and not found, an empty default pattern should be returned - silence
 // Second number indicates jump to specific pattern number rather the next in line.
-func (p *sequencer) Next(patternNumber ...int) {
-
+func (s *sequencer) Next(pattern int) *sequencer {
+	return s
 }
 
 // Pause .
-func (p *sequencer) Pause() {
-
-}
-
-// Stop .
-func (p *sequencer) Stop() {
-
-}
-
-func (p *sequencer) Tempo(bpm float64) {
+func (s *sequencer) Pause() {
 
 }
 
 // SetVolume .
-func (p *sequencer) Volume(value int8) {
+func (s *sequencer) Volume(value int8) {
 
 }
 
-// Close midi connection.
-func (p *sequencer) Close() {
-	p.in.Close()
-	p.out.Close()
-	p.drv.Close()
-}
+func (s *sequencer) Chain(patterns ...int) *sequencer {
+	for _, pattern := range patterns {
+		s.chains = append(s.chains, pattern)
+	}
 
-func (p *sequencer) noteon(t voice, n notes, vel int8) {
-	mu.Lock()
-	p.wr.SetChannel(uint8(t))
-	writer.NoteOn(p.wr, uint8(n), uint8(vel))
-	mu.Unlock()
-}
-
-func (p *sequencer) noteoff(t voice, n notes) {
-	mu.Lock()
-	p.wr.SetChannel(uint8(t))
-	writer.NoteOff(p.wr, uint8(n))
-	mu.Unlock()
-}
-
-func (p *sequencer) cc(t voice, par Parameter, val int8) {
-	mu.Lock()
-	p.wr.SetChannel(uint8(t))
-	writer.ControlChange(p.wr, uint8(par), uint8(val))
-	mu.Unlock()
-}
-
-func (p *sequencer) pc(t voice, pc int8) {
-	mu.Lock()
-	p.wr.SetChannel(uint8(t))
-	writer.ProgramChange(p.wr, uint8(pc))
-	mu.Unlock()
-}
-
-func (p *sequencer) unlockPreset() {
-
-}
-
-func (p *sequencer) unlockMachine() {
-
-}
-
-func (p *sequencer) Chain(patterns ...int) {
-
-}
-
-// CopyPattern copies the input source pattern to caller destination.
-func (s *sequencer) CopyPattern(src, dst int) *sequencer {
-	s.pattern[dst] = s.pattern[src]
 	return s
 }
 
 // Pattern returns the specified pattern out of project's pattern collection.
 // Allows to access pattern's methods.
-func (s *sequencer) Pattern(pos int) *pattern {
-	return s.pattern[pos]
+func (s *sequencer) Pattern(id int) *pattern {
+	if _, ok := s.pattern[id]; !ok {
+		s.pattern[id] = &pattern{
+			track: make(map[voice]*track),
+			scale: &scale{15, 1.0, 0},
+		}
+	}
+
+	return s.pattern[id]
 }
 
-// CopyTrack copies a track from input source to caller destination.
-func (p *pattern) CopyTrack(src, dst voice) *pattern {
-	p.track[dst] = p.track[src]
+// Close midi connection.
+func (s *sequencer) Close() {
+	s.in.Close()
+	s.out.Close()
+	s.drv.Close()
+}
+
+func (s *sequencer) noteon(t voice, n notes, vel int8) {
+	mu.Lock()
+	s.wr.SetChannel(uint8(t))
+	writer.NoteOn(s.wr, uint8(n), uint8(vel))
+	mu.Unlock()
+}
+
+func (s *sequencer) noteoff(t voice, n notes) {
+	mu.Lock()
+	s.wr.SetChannel(uint8(t))
+	writer.NoteOff(s.wr, uint8(n))
+	mu.Unlock()
+}
+
+func (s *sequencer) cc(t voice, par Parameter, val int8) {
+	mu.Lock()
+	s.wr.SetChannel(uint8(t))
+	writer.ControlChange(s.wr, uint8(par), uint8(val))
+	mu.Unlock()
+}
+
+func (s *sequencer) pc(t voice, pc int8) {
+	mu.Lock()
+	s.wr.SetChannel(uint8(t))
+	writer.ProgramChange(s.wr, uint8(pc))
+	mu.Unlock()
+}
+
+//
+// free
+//
+
+func (f *free) Preset(track voice, preset preset) {
+	for parameter, value := range preset {
+		f.midi.cc(track, parameter, value)
+	}
+}
+
+// Note
+// duration in milliseconds (ms)
+func (f *free) Note(track voice, note notes, velocity int8, duration float64) {
+	f.midi.noteon(track, note, velocity)
+	go func() {
+		time.Sleep(time.Millisecond * time.Duration(duration))
+		f.midi.noteoff(track, note)
+	}()
+}
+
+func (f *free) CC(track voice, parameter Parameter, value int8) {
+	f.midi.cc(track, parameter, value)
+}
+
+func (f *free) PC(t voice, pc int8) {
+	f.midi.pc(t, pc)
+}
+
+//
+// pattern
+//
+
+// Scale sets the scale for the pattern.
+// If scaleMode is set to track TRK the provided scale settings are used as default to the rest of the tracks.
+// This mimics synth's own functionality.
+func (p *pattern) Scale(length int, scale float64, chg int8) *pattern {
+	p.scale.length = length
+	p.scale.scale = scale
+	p.scale.change = chg
+	return p
+}
+
+func (p *pattern) Tempo(tempo float64) *pattern {
+	p.tempo = tempo
 	return p
 }
 
 func (p *pattern) Track(id voice) *track {
+	if _, ok := p.track[id]; !ok {
+		p.track[id] = &track{
+			// scale:  &scale{length: 15, scale: 1.0},
+			preset: defaultPreset(id),
+			trig:   make(map[int]*trig),
+		}
+	}
+
 	return p.track[id]
 }
 
@@ -642,39 +662,31 @@ func (p *pattern) Track(id voice) *track {
 
 // SetScale sets a new scale for the track.
 // If not set a default one is used.
-func (t *track) SetScale(mod scaleMode, length int, scl float64, chg int8) *track {
-	t.mod = mod
-	t.len = length
-	t.scl = scl
-	t.chg = chg
+func (t *track) Scale(length int, scale float64, change int8) *track {
+	t.scale.length = length
+	t.scale.scale = scale
+	t.scale.change = change
 	return t
 }
 
-func (t *track) SetPreset(p preset) *track {
+func (t *track) Preset(p preset) *track {
 	t.preset = p
 	return t
 }
 
 // SetParameter assigned a parameter to the preset.
 // First argument is a Parameter type and second value an int8.
-func (p *track) SetParameter(parameter Parameter, value int8) {
-	mu.Lock()
-	p.preset[parameter] = value
-	mu.Unlock()
-}
-
-// SetParameter assigned a parameter to the preset.
-// First argument is a Parameter type and second value an int8.
-func (p *track) DelParameter(parameter Parameter) {
-	mu.Lock()
-	delete(p.preset, parameter)
-	mu.Unlock()
+func (t *track) Parameter(parameter Parameter, value int8) *track {
+	// mu.Lock()
+	t.preset[parameter] = value
+	// mu.Unlock()
+	return t
 }
 
 func (t *track) Trig(id int) *trig {
-	mu.Lock()
-	t.trig[id] = &trig{&note{C4, 4, 126}, make(map[Parameter]int8)}
-	mu.Unlock()
+	if _, ok := t.trig[id]; !ok {
+		t.trig[id] = &trig{note: &note{C4, 4, 126}}
+	}
 
 	return t.trig[id]
 }
@@ -683,16 +695,9 @@ func (t *track) Trig(id int) *trig {
 // scale
 //
 
-// SetMod Mode can be set to either PTN (pattern) or TRK (track). In PTN mode all tracks share the same
-// SCALE and LENGTH settings. In TRK mode, all tracks can have individual SCALE and LENGTH settings.
-func (s *scale) SetMod(mod scaleMode) *scale {
-	s.mod = mod
-	return s
-}
-
 // SetLen sets the step length (amount of steps) of the pattern/track.
-func (s *scale) SetLen(length int) *scale {
-	s.len = length
+func (s *scale) Length(length int) *scale {
+	s.length = length
 	return s
 }
 
@@ -700,16 +705,16 @@ func (s *scale) SetLen(length int) *scale {
 // settings, 1/8X, 1/4X, 1/2X, 3/4X, 1X, 3/2X and 2X. A setting of 1/8X plays back the pattern at one-eighth of
 // the set tempo. 3/4X plays the pattern back at three-quarters of the tempo; 3/2X plays back the pattern
 // twice as fast as the 3/4X setting. 2X makes the pattern play at twice the BPM.
-func (s *scale) SetScl(scl float64) *scale {
-	s.scl = scl
+func (s *scale) Scale(scl float64) *scale {
+	s.scale = scl
 	return s
 }
 
 // SetChg controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
 // regarding cueing and chaining. If CHG is set to OFF, the default change length is INF (infinite) in TRACK
 // mode and the same value as LEN in PATTERN mode.
-func (s *scale) SetChg(chg int8) *scale {
-	s.chg = chg
+func (s *scale) Change(chg int8) *scale {
+	s.change = chg
 	return s
 }
 
@@ -726,90 +731,34 @@ func (s *scale) SetChg(chg int8) *scale {
 //
 
 func (t *trig) Lock(preset preset) *trig {
-	mu.Lock()
 	t.lock = preset
-	mu.Unlock()
 	return t
 }
 
-// SetMachine .
-func (t *trig) LockMachine(m machine) *trig {
-	// l.lockMachine = lockMachine
-	// l.Machine = m
-	return t
+// Note .
+func (t *trig) Note(key notes, length float64, velocity int8) {
+	t.note.key = key
+	t.note.length = length
+	t.note.velocity = velocity
 }
 
-// SetNote .
-func (t *trig) SetNote(key notes, length float64, velocity int8) {
-	t.key = key
-	t.length = length
-	t.velocity = velocity
-}
-
-// CopyTrig .
-func (t *trig) CopyTrig(src *trig) {
-	*t = *src
-}
-
-func (t *trig) ClearTrig(src *trig) {
-	*t = *src
-}
+//
+// note
+//
 
 // SetKey .
-func (n *note) SetKey(key notes) {
+func (n *note) Key(key notes) {
 	n.key = key
 }
 
 // SetLength Trig Length sets the duration of the notes. When a note has finished playing a NOTE OFF command
 // is sent. The INF setting equals infinite note length. This parameter only applies if GATE is set to ON or
 // when sending trig length data over MIDI. (0.125–128, INF)
-func (n *note) SetLength(length float64) {
+func (n *note) Length(length float64) {
 	n.length = length
 }
 
 // SetVelocity .
-func (n *note) SetVelocity(velocity int8) {
+func (n *note) Velocity(velocity int8) {
 	n.velocity = velocity
-}
-
-// CopyNote .
-func (n *note) CopyNote(src *note) {
-	*n = *src
-}
-
-// default presets for voices 1-6
-func defaultT1() preset {
-	p := make(map[Parameter]int8)
-	p[COLOR] = 10
-	return p
-}
-
-func defaultT2() preset {
-	d := make(map[Parameter]int8)
-	d[COLOR] = 10
-	return d
-}
-
-func defaultT3() preset {
-	d := make(map[Parameter]int8)
-	d[COLOR] = 10
-	return d
-}
-
-func defaultT4() preset {
-	d := make(map[Parameter]int8)
-	d[COLOR] = 10
-	return d
-}
-
-func defaultT5() preset {
-	d := make(map[Parameter]int8)
-	d[COLOR] = 10
-	return d
-}
-
-func defaultT6() preset {
-	p := make(preset)
-	p[COLOR] = 10
-	return p
 }

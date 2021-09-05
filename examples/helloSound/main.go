@@ -17,103 +17,103 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer p.Close()
 
-	p.Play()
-	// test
-	// p.CopyPattern(CHORUS, VERSE)
-	// p.Pattern(INTRO)
+	p.Pattern(INTRO).
+		Scale(15, 1.0, 0).
+		Tempo(125.0)
 
-	// p.Pattern(INTRO).Track(em.T1)
+	// kick
+	kick := []int{0, 4, 8, 12}
+	for _, v := range kick {
+		p.Pattern(INTRO).Track(em.T1).Trig(v)
+	}
 
-	// p.Pattern(INTRO).Track(em.T1).SetScale(em.PTN, 16, 1.0, 8)
+	// // snare
+	snare := []int{4, 12}
+	for _, v := range snare {
+		p.Pattern(INTRO).Track(em.T2).Trig(v)
+	}
+
+	// // hi-hat
+	for i := 0; i <= 15; i++ {
+		p.Pattern(INTRO).Track(em.T3).Trig(i)
+	}
+
+	// tom
+	tom := []int{2, 3, 6, 7, 10, 11, 14, 15}
+	for _, v := range tom {
+		p.Pattern(INTRO).Track(em.T4).Trig(v)
+	}
+
+	// tone
+	tone := []int{5, 9, 10}
+	for _, v := range tone {
+		p.Pattern(INTRO).Track(em.T5).Trig(v)
+	}
+
+	// synth
+	synth := []int{3, 7, 9}
+	for _, v := range synth {
+		p.Pattern(INTRO).Track(em.T6).Trig(v)
+	}
 
 	// preset := make(map[em.Parameter]int8)
-	// p.Pattern(INTRO).Track(em.T1).SetPreset(preset)
+	// preset := em.PT1()
+	// preset[em.COLOR] = 100
+	// p.Pattern(INTRO).Track(em.T1).Preset(preset)
 	// p.Pattern(INTRO).Track(em.T1).Trig(0).Lock(preset)
 
-	// todo: delete
-
-	// // pattern
-	// p.InitPattern(INTRO)
-	// p0 := p.Pattern[INTRO]
-	// p0.SetTempo(90)
-
-	// // track
-	// p0.T1.SetScale(em.PTN, 8, 1.0, 0)
-	// // p0.T1.Preset = preset
-	// var t prelock
-	// p0.T1.SetPreset(t.NewPreset())
-	// p0.T1.InitTrig(0)
-	// p0.T1.InitTrig(2)
-	// p0.T1.InitTrig(4)
-	// // copy track
-	// p0.T2.CopyTrack(p0.T1)
-
-	// // scale
-	// p0.T1.Scale.SetMod(em.PTN)
-	// p0.T1.Scale.SetLen(8)
-	// p0.T1.Scale.SetScl(1.0)
-	// // inf = 0
-	// p0.T1.Scale.SetChg(0)
-
-	// // preset
-	// p0.T1.Preset = preset
-	// p0.T1.Preset.SetParameter(em.COLOR, 120)
-	// p0.T1.Preset.DelParameter(em.COLOR)
-
-	// // trig
-	// p0.T1.Trig[0].SetNote(em.A4, 0.4, 127)
-	// p0.T1.Trig[0].Lock = lock
-
-	// // copy trig
-	// p0.T1.InitTrig(6)
-	// p0.T1.Trig[6].CopyTrig(p0.T1.Trig[4])
-
-	// // note
-	// p0.T1.Trig[0].Note.SetKey(em.A5)
-	// // inf = 0
-	// p0.T1.Trig[0].Note.SetLength(0.4)
-	// p0.T1.Trig[0].Note.SetVelocity(126)
-	// // copy note
-	// p0.T1.Trig[2].Note.CopyNote(p0.T1.Trig[0].Note)
-	// p0.T1.Trig[4].Note.CopyNote(p0.T1.Trig[0].Note)
-
-	// // lock
-	// p0.T1.Trig[0].Lock.Preset = preset
-	// p0.T1.Trig[0].Lock.Preset[em.COLOR] = 12
-	// p0.T1.Trig[0].Lock.SetMachine(em.KICK)
-
-	// // copy pattern
-	// p.InitPattern(VERSE)
-	// p.Pattern[VERSE].CopyPattern(p.Pattern[INTRO])
-	// p.Pattern[VERSE].SetTempo(150)
-
-	// // sequencer
-	// s, err := p.Sequencer()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// err = s.Play()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// s.Tempo(140.9)
-
-	// s.Volume(127)
-
+	// p.Chain(INTRO, INTRO, VERSE, CHORUS).Play()
 	// p.Next()
-	// p.Next(2)
-	// p.Next(CHORUS)
-	// p.Next(OUTRO, 5)
 
-	// p.Pause()
-	// time.Sleep(2 * time.Second)
-	// p.Play()
+	p.Play(INTRO)
+	// p.Next(INTRO)
 
 	// p.Stop()
-	// p.Play()
 
-	p.Close()
+	// free
+	// var i int = 100
+	// p.Free.CC(em.T1, em.MACHINE, 1)
+	// p.Free.CC(em.T1, em.GATE, 0)
+	// p.Free.CC(em.T1, em.COLOR, 100)
+	// p.Free.CC(em.T1, em.CONTOUR, 0)
+	// p.Free.CC(em.T1, em.SWEEP, 100)
+	// p.Free.CC(em.T1, em.REVERB, 0)
+	// p.Free.Note(em.T1, em.C4, 120, 200)
+	// p.Free.CC(em.T1, em.MACHINE, 2)
+	// time.Sleep(time.Duration(i) * time.Millisecond)
+	// p.Free.CC(em.T1, em.GATE, 1)
+	// p.Free.CC(em.T1, em.COLOR, 120)
+	// p.Free.CC(em.T1, em.CONTOUR, 0)
+	// p.Free.CC(em.T1, em.SWEEP, 120)
+	// p.Free.CC(em.T1, em.REVERB, 120)
+	// p.Free.CC(em.T1, em.REVERBSIZE, 120)
+	// p.Free.Note(em.T1, em.A4, 120, 500)
+	// p.Free.CC(em.T1, em.MACHINE, 6)
+	// time.Sleep(time.Duration(i*4) * time.Millisecond)
+	// p.Free.CC(em.T1, em.GATE, 0)
+	// p.Free.CC(em.T1, em.COLOR, 100)
+	// p.Free.CC(em.T1, em.CONTOUR, 0)
+	// p.Free.CC(em.T1, em.SWEEP, 100)
+	// p.Free.CC(em.T1, em.REVERB, 0)
+	// p.Free.CC(em.T1, em.REVERBSIZE, 10)
+	// p.Free.Note(em.T1, em.D6, 120, 1500)
+	// go func() {
+	// 	var color, contour, sweep em.Parameter
+	// 	color = 100
+	// 	sweep = 100
+	// 	contour = 0
+	// 	for {
+	// 		color -= 1
+	// 		sweep -= 1
+	// 		contour += 1
+	// 		time.Sleep(10 * time.Millisecond)
+	// 		p.Free.CC(em.T1, em.COLOR, int8(color))
+	// 		p.Free.CC(em.T1, em.CONTOUR, int8(contour))
+	// 		p.Free.CC(em.T1, em.SWEEP, int8(sweep))
+	// 		p.Free.CC(em.T1, em.SHAPE, int8(sweep))
+	// 	}
+	// }()
+	// time.Sleep(2 * time.Second)
 }
