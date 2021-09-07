@@ -36,8 +36,7 @@ For more information see the [formulae page](https://formulae.brew.sh/formula/rt
 
 _complete examples can be found under [examples](https://github.com/bh90210/elektronmodels/tree/master/examples/) folder_
 
-If you haven't already, download cycles/samples manuals from elektron's website.
-The relevant part for this library is the `APPENDIX A: MIDI SPECIFICATIONS`.
+The relevant cycles/samples manuals' parts for this library is the `APPENDIX A: MIDI SPECIFICATIONS`.
 
 <img src="https://i.imgur.com/Yrs6YS3.png" alt="drawing" width="350"/> <img src="https://i.imgur.com/cmil9NG.png" alt="drawing" width="350"/>
 

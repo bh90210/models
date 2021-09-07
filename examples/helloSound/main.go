@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	em "github.com/athenez/models"
 )
 
@@ -22,32 +20,32 @@ func main() {
 	defer p.Close()
 
 	p.Pattern(INTRO).
-		Scale(em.TRK, 15, 4.0, 2).
+		Scale(em.TRK, 15, 4.0, 0).
 		Tempo(250.0)
 
-	p.Pattern(INTRO).Track(em.T2).Scale(15, 1.0)
+	p.Pattern(INTRO).Track(em.T2).Scale(15, 3.0)
 
-	// kick
+	// // kick
 	kick := []int{0, 4, 8, 12}
 	for _, v := range kick {
 		p.Pattern(INTRO).Track(em.T2).Trig(v).Note(em.A4, 200, 120)
 	}
 
-	preset1 := em.PT3()
-	preset1[em.GATE] = 1
-	preset1[em.PUNCH] = 1
-	preset1[em.DECAY] = 120
-	// p.Pattern(INTRO).Track(em.T1).Trig(0).Lock(preset1)
-	// p.Pattern(INTRO).Track(em.T1).Trig(4).Lock(preset1)
+	// preset1 := em.PT3()
+	// preset1[em.GATE] = 1
+	// preset1[em.PUNCH] = 1
+	// preset1[em.DECAY] = 120
+	// // p.Pattern(INTRO).Track(em.T1).Trig(0).Lock(preset1)
+	// // p.Pattern(INTRO).Track(em.T1).Trig(4).Lock(preset1)
 
-	p.Pattern(INTRO).Track(em.T2).Trig(8).Lock(preset1)
-	p.Pattern(INTRO).Track(em.T2).Trig(0).Nudge(10)
-	// p.Pattern(INTRO).Track(em.T1).Trig(12).Lock(preset2)
+	// p.Pattern(INTRO).Track(em.T2).Trig(8).Lock(preset1)
+	// p.Pattern(INTRO).Track(em.T2).Trig(0).Nudge(250)
+	// // p.Pattern(INTRO).Track(em.T1).Trig(12).Lock(preset2)
 
 	// // snare
-	// snare := []int{4, 12}
+	// snare := []int{0, 4, 8, 12}
 	// for _, v := range snare {
-	// 	p.Pattern(INTRO).Track(em.T2).Trig(v)
+	// 	p.Pattern(INTRO).Track(em.T1).Trig(v)
 	// }
 
 	// // hi-hat
@@ -79,44 +77,40 @@ func main() {
 	// preset[em.COLOR] = 100
 	// p.Pattern(INTRO).Track(em.T1).Preset(preset)
 	// p.Pattern(INTRO).Track(em.T1).Trig(0).Lock(preset)
+	// p.Pattern(VERSE).
+	// 	Scale(em.TRK, 15, 4.0, 4).
+	// 	Tempo(250.0)
 
-	// p.Chain(INTRO, INTRO, VERSE, CHORUS).Play()
+	p.Pattern(VERSE).Scale(em.TRK, 15, 1.0, 7).Tempo(250.0).Track(em.T2).Scale(15, 3.0)
 
-	go p.Play(INTRO)
-
-	time.Sleep(2 * time.Second)
-
-	p.Pattern(VERSE).
-		Scale(em.TRK, 15, 4.0, 4).
-		Tempo(250.0)
-
-	p.Pattern(VERSE).Track(em.T2).Scale(15, 1.0)
-
-	// kick
 	// kick = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 	for _, v := range kick {
 		p.Pattern(VERSE).Track(em.T2).Trig(v).Note(em.A4, 200, 120)
 	}
 
-	preset1 = em.PT3()
-	preset1[em.GATE] = 1
-	preset1[em.PUNCH] = 1
-	preset1[em.DECAY] = 120
+	p.Chain(INTRO, VERSE).Play()
+
+	// go p.Play(INTRO)
+
 	// p.Pattern(INTRO).Track(em.T1).Trig(0).Lock(preset1)
 	// p.Pattern(INTRO).Track(em.T1).Trig(4).Lock(preset1)
 
 	// p.Pattern(VERSE).Track(em.T6).Trig(8).Lock(preset1)
 	// p.Pattern(VERSE).Track(em.T6).Trig(0).Nudge(10)
 
-	p.Next(VERSE)
+	// time.Sleep(1 * time.Second)
+	// fmt.Println("dsafdsaf")
+	// p.Change(VERSE)
+
+	// time.Sleep(1 * time.Second)
+	// p.Pause()
 	// time.Sleep(1 * time.Second)
 	// p.Resume()
-	// // p.Next(INTRO)
 	// time.Sleep(1 * time.Second)
 	// p.Stop()
 
 	// free
-	// var i int = 100
+	// var i int = 500
 	// p.Free.CC(em.T1, em.MACHINE, 1)
 	// p.Free.CC(em.T1, em.GATE, 0)
 	// p.Free.CC(em.T1, em.COLOR, 100)
@@ -126,6 +120,7 @@ func main() {
 	// p.Free.Note(em.T1, em.C4, 120, 200)
 	// p.Free.CC(em.T1, em.MACHINE, 2)
 	// time.Sleep(time.Duration(i) * time.Millisecond)
+
 	// p.Free.CC(em.T1, em.GATE, 1)
 	// p.Free.CC(em.T1, em.COLOR, 120)
 	// p.Free.CC(em.T1, em.CONTOUR, 0)
@@ -135,6 +130,7 @@ func main() {
 	// p.Free.Note(em.T1, em.A4, 120, 500)
 	// p.Free.CC(em.T1, em.MACHINE, 6)
 	// time.Sleep(time.Duration(i*4) * time.Millisecond)
+
 	// p.Free.CC(em.T1, em.GATE, 0)
 	// p.Free.CC(em.T1, em.COLOR, 100)
 	// p.Free.CC(em.T1, em.CONTOUR, 0)
