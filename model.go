@@ -321,6 +321,8 @@ type sequencer struct {
 	// fillMode chan bool
 	// chances chan float64
 	// swing chan float64
+
+	scaleLock bool
 }
 
 type free struct {
@@ -340,6 +342,7 @@ type track struct {
 }
 
 type scale struct {
+	mode   scaleMode
 	length int
 	scale  float64
 	change int8
@@ -458,17 +461,19 @@ func (s *sequencer) Play(ids ...int) {
 		return
 	}
 
-	// check tracks for scale settings
-
-	// check tempo
-
-	// var count int
-
 	for i := 0; i <= 5; i++ {
 		voice := voice(i)
 		if track, ok := s.pattern[id].track[voice]; ok {
+
+			var scl float64
+			if track.scale != nil {
+				scl = track.scale.scale
+			} else {
+				scl = pattern.scale.scale
+			}
+
 			tick := time.NewTicker(
-				time.Duration(60000/(pattern.tempo*pattern.scale.scale)) * time.Millisecond)
+				time.Duration(60000/(pattern.tempo*scl)) * time.Millisecond)
 
 			go func() {
 				var count int
@@ -489,14 +494,33 @@ func (s *sequencer) Play(ids ...int) {
 			loop:
 				for {
 					select {
-					case newTempo := <-s.tempo:
-						tick.Reset(time.Duration(60000/(newTempo*pattern.scale.scale)) * time.Millisecond)
+					// case newTempo := <-s.tempo:
+					// 	tick.Reset(time.Duration(60000/(newTempo*scl)) * time.Millisecond)
 					case <-tick.C:
 						if count > s.pattern[id].scale.length {
 							count = 0
 						}
 
 						if trig, ok := track.trig[count]; ok {
+							switch {
+							case trig.scale != nil:
+								tick.Reset(time.Duration(60000/(pattern.tempo*trig.scale.scale)) * time.Millisecond)
+								s.scaleLock = true
+
+							case s.scaleLock:
+								tick.Reset(time.Duration(60000/(pattern.tempo*scl)) * time.Millisecond)
+								s.scaleLock = false
+							}
+							// if trig.scale != nil {
+							// 	tick.Reset(time.Duration(60000/(pattern.tempo*trig.scale.scale)) * time.Millisecond)
+							// 	s.scaleLock = true
+							// } else {
+							// 	if s.scaleLock {
+							// 		tick.Reset(time.Duration(60000/(pattern.tempo*scl)) * time.Millisecond)
+							// 		s.scaleLock = false
+							// 	}
+							// }
+
 							s.noteon(voice,
 								trig.note.key,
 								trig.note.velocity)
@@ -504,6 +528,7 @@ func (s *sequencer) Play(ids ...int) {
 								time.Sleep(time.Millisecond * time.Duration(trig.note.length))
 								s.noteoff(voice, trig.note.key)
 							}()
+
 							// fmt.Println("----new----")
 							// fmt.Println("track: ", voice)
 							// fmt.Println("trig: ", count)
@@ -555,7 +580,7 @@ func (s *sequencer) Pattern(id int) *pattern {
 	if _, ok := s.pattern[id]; !ok {
 		s.pattern[id] = &pattern{
 			track: make(map[voice]*track),
-			scale: &scale{15, 1.0, 15},
+			scale: &scale{PTN, 15, 1.0, 15},
 		}
 	}
 
@@ -632,7 +657,7 @@ func (f *free) PC(t voice, pc int8) {
 // Scale sets the scale for the pattern.
 // If scaleMode is set to track TRK the provided scale settings are used as default to the rest of the tracks.
 // This mimics synth's own functionality.
-func (p *pattern) Scale(length int, scale float64, chg int8) *pattern {
+func (p *pattern) Scale(mode scaleMode, length int, scale float64, chg int8) *pattern {
 	p.scale.length = length
 	p.scale.scale = scale
 	p.scale.change = chg
