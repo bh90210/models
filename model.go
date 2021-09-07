@@ -323,6 +323,8 @@ type sequencer struct {
 	// swing chan float64
 
 	scaleLock bool
+	trigLock  bool
+	// lastPlayedTrig trig
 }
 
 type free struct {
@@ -424,6 +426,7 @@ func NewProject(m model) (*Project, error) {
 
 	sequencer.pattern = make(map[int]*pattern)
 	sequencer.tempo = make(chan float64)
+	// sequencer.lastPlayedTrig = trig{note: &note{key: C1}}
 
 	return &Project{
 		model:     m,
@@ -473,36 +476,76 @@ func (s *sequencer) Play(ids ...int) {
 				scl = pattern.scale.scale
 			}
 
+			go func() {
+				// check if track has preset
+				// if not set default preset for track
+				if len(track.preset) == 0 {
+					track.preset = defaultPreset(voice)
+				}
+
+				// apply preset
+				for parameter, value := range track.preset {
+					s.cc(voice, parameter, value)
+				}
+
+				// special case for lock on trig 0
+				if trig, ok := track.trig[0]; ok {
+					if len(trig.lock) != 0 {
+						for k, v := range trig.lock {
+							s.cc(voice, k, v)
+						}
+						s.trigLock = true
+					}
+				}
+			}()
+
 			tick := time.NewTicker(
 				time.Duration(60000/(pattern.tempo*scl)) * time.Millisecond)
 
 			go func() {
 				var count int
+				var counter = make(chan int)
+				var fire = make(chan bool)
 
+				// lock patcher
 				go func() {
-					// check if track has preset
-					// if not set default preset for track
-					if len(track.preset) == 0 {
-						track.preset = defaultPreset(voice)
-					}
+					for {
+						count := <-counter
+						if trig, ok := track.trig[count+1]; ok {
+							if len(trig.lock) != 0 {
+								<-fire
+								for k, v := range trig.lock {
+									s.cc(voice, k, v)
+								}
+								s.trigLock = true
+								continue
+							}
+						}
 
-					// apply preset
-					for parameter, value := range track.preset {
-						s.cc(voice, parameter, value)
+						if s.trigLock {
+							<-fire
+							for k, v := range track.preset {
+								s.cc(voice, k, v)
+							}
+							s.trigLock = false
+						}
 					}
 				}()
 
-			loop:
+				// loop:
 				for {
 					select {
-					// case newTempo := <-s.tempo:
-					// 	tick.Reset(time.Duration(60000/(newTempo*scl)) * time.Millisecond)
+					case newTempo := <-s.tempo:
+						tick.Reset(time.Duration(60000/(newTempo*scl)) * time.Millisecond)
 					case <-tick.C:
 						if count > s.pattern[id].scale.length {
 							count = 0
 						}
 
+						counter <- count
+
 						if trig, ok := track.trig[count]; ok {
+							// scale check/reset
 							switch {
 							case trig.scale != nil:
 								tick.Reset(time.Duration(60000/(pattern.tempo*trig.scale.scale)) * time.Millisecond)
@@ -512,34 +555,21 @@ func (s *sequencer) Play(ids ...int) {
 								tick.Reset(time.Duration(60000/(pattern.tempo*scl)) * time.Millisecond)
 								s.scaleLock = false
 							}
-							// if trig.scale != nil {
-							// 	tick.Reset(time.Duration(60000/(pattern.tempo*trig.scale.scale)) * time.Millisecond)
-							// 	s.scaleLock = true
-							// } else {
-							// 	if s.scaleLock {
-							// 		tick.Reset(time.Duration(60000/(pattern.tempo*scl)) * time.Millisecond)
-							// 		s.scaleLock = false
-							// 	}
-							// }
 
 							s.noteon(voice,
 								trig.note.key,
 								trig.note.velocity)
-							go func() {
+							go func(fire chan bool) {
 								time.Sleep(time.Millisecond * time.Duration(trig.note.length))
 								s.noteoff(voice, trig.note.key)
-							}()
-
-							// fmt.Println("----new----")
-							// fmt.Println("track: ", voice)
-							// fmt.Println("trig: ", count)
-							// fmt.Println()
+								fire <- true
+							}(fire)
 						}
 
 						count++
 
 					case <-s.pause:
-						break loop
+						// play <- true
 					}
 				}
 			}()
@@ -572,6 +602,11 @@ func (s *sequencer) Chain(patterns ...int) *sequencer {
 		s.chains = append(s.chains, pattern)
 	}
 
+	return s
+}
+
+func (s *sequencer) Tempo(tempo float64) *sequencer {
+	s.tempo <- tempo
 	return s
 }
 
