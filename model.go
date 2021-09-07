@@ -460,17 +460,18 @@ func (s *sequencer) Play(ids ...int) {
 		return
 	}
 
+	// next pattern patcher
+	go func() {
+		t := time.NewTimer(time.Duration(60000/pattern.tempo) * time.Millisecond)
+		t.C
+		tick := time.NewTicker(
+			time.Duration(60000/pattern.tempo) * time.Millisecond)
+
+	}()
+
 	for i := 0; i <= 5; i++ {
 		voice := voice(i)
 		if track, ok := s.pattern[id].track[voice]; ok {
-
-			var scl float64
-			switch pattern.scale.mode {
-			case PTN:
-				scl = track.scale.scale
-			case TRK:
-				scl = pattern.scale.scale
-			}
 
 			go func() {
 				// check if track has preset
@@ -494,6 +495,19 @@ func (s *sequencer) Play(ids ...int) {
 					}
 				}
 			}()
+
+			var scl float64
+			switch pattern.scale.mode {
+			case PTN:
+				scl = track.scale.scale
+			case TRK:
+				scl = pattern.scale.scale
+			}
+
+			// block it if changing pattern is on
+			if changingPattern {
+				<-transition
+			}
 
 			tick := time.NewTicker(
 				time.Duration(60000/(pattern.tempo*scl)) * time.Millisecond)
@@ -580,13 +594,6 @@ func (s *sequencer) Play(ids ...int) {
 	<-block
 }
 
-// Next 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
-// if used and not found, an empty default pattern should be returned - silence
-// Second number indicates jump to specific pattern number rather the next in line.
-func (s *sequencer) Next(pattern int) *sequencer {
-	return s
-}
-
 // Pause .
 func (s *sequencer) Pause() {
 	s.pause <- true
@@ -598,6 +605,13 @@ func (s *sequencer) Resume() {
 
 func (s *sequencer) Stop() {
 	s.stop <- true
+}
+
+// Next 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
+// if used and not found, an empty default pattern should be returned - silence
+// Second number indicates jump to specific pattern number rather the next in line.
+func (s *sequencer) Next(pattern int) *sequencer {
+	return s
 }
 
 func (s *sequencer) Chain(patterns ...int) *sequencer {

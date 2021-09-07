@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	em "github.com/athenez/models"
 )
 
@@ -81,9 +83,33 @@ func main() {
 	// p.Chain(INTRO, INTRO, VERSE, CHORUS).Play()
 	// p.Next()
 
-	p.Play(INTRO)
-	// time.Sleep(2 * time.Second)
-	// p.Pause()
+	go p.Play(INTRO)
+
+	time.Sleep(4 * time.Second)
+
+	p.Pattern(VERSE).
+		Scale(em.TRK, 15, 4.0, 2).
+		Tempo(250.0)
+
+	p.Pattern(VERSE).Track(em.T6).Scale(3, 3.0)
+
+	// kick
+	kick = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+	for _, v := range kick {
+		p.Pattern(VERSE).Track(em.T6).Trig(v).Note(em.A4, 200, 120)
+	}
+
+	preset1 = em.PT3()
+	preset1[em.GATE] = 1
+	preset1[em.PUNCH] = 1
+	preset1[em.DECAY] = 120
+	// p.Pattern(INTRO).Track(em.T1).Trig(0).Lock(preset1)
+	// p.Pattern(INTRO).Track(em.T1).Trig(4).Lock(preset1)
+
+	p.Pattern(VERSE).Track(em.T6).Trig(8).Lock(preset1)
+	p.Pattern(VERSE).Track(em.T6).Trig(0).Nudge(900)
+
+	p.Next(VERSE)
 	// time.Sleep(1 * time.Second)
 	// p.Resume()
 	// // p.Next(INTRO)
