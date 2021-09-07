@@ -1,4 +1,4 @@
-module github.com/bh90210/elektronmodels
+module github.com/athenez/models
 
 go 1.16
 

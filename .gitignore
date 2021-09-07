@@ -15,3 +15,5 @@ dev
 mem.pb.gz
 
 .vscode/*
+examples/record
+out.wav
