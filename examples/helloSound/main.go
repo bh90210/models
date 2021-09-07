@@ -1,7 +1,7 @@
 package main
 
 import (
-	em "github.com/bh90210/elektronmodels"
+	em "github.com/athenez/models"
 )
 
 const (
@@ -20,7 +20,7 @@ func main() {
 	defer p.Close()
 
 	p.Pattern(INTRO).
-		Scale(15, 4.0, 2).
+		Scale(em.PTN, 15, 4.0, 2).
 		Tempo(125.0)
 
 	p.Pattern(INTRO).Track(em.T1).Scale(15, 1.0)
