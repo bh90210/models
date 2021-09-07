@@ -1,7 +1,3 @@
-github.com/bh90210/elektronmodels v0.0.1 h1:Q7Pyt2uXo/Sv5axZ4oxCPb9HK1p3KqK6IGZTGpCMnjg=
-github.com/bh90210/elektronmodels v0.0.1/go.mod h1:UJVP+C7yK8jgtz0Hdbzz2Hi5Z+4KC6OppUdApu3m/zA=
-github.com/jfreymuth/pulse v0.1.0 h1:KN38/9hoF9PJvP5DpEVhMRKNuwnJUonc8c9ARorRXUA=
-github.com/jfreymuth/pulse v0.1.0/go.mod h1:cpYspI6YljhkUf1WLXLLDmeaaPFc3CnGLjDZf9dZ4no=
 gitlab.com/gomidi/midi v1.21.0/go.mod h1:3ohtNOhqoSakkuLG/Li1OI6I3J1c2LErnJF5o/VBq1c=
 gitlab.com/gomidi/midi v1.23.3 h1://gDrbjiLdDZNW6W60mloIVApZ4PgGNXiGGKgjpJg00=
 gitlab.com/gomidi/midi v1.23.3/go.mod h1:3ohtNOhqoSakkuLG/Li1OI6I3J1c2LErnJF5o/VBq1c=
