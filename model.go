@@ -317,9 +317,13 @@ type sequencer struct {
 	pattern map[int]*pattern
 
 	// playtime fields
-	pause  chan bool
-	resume chan bool
-	stop   chan bool
+	pause          chan bool
+	resume         chan bool
+	stop           chan bool
+	next           chan bool
+	currentPattern int
+	countdown      int
+
 	chains []int
 	// fillMode chan bool
 	// chances chan float64
@@ -337,6 +341,8 @@ type pattern struct {
 	track map[voice]*track
 	scale *scale
 	tempo float64
+
+	changingPattern bool
 }
 
 type track struct {
@@ -387,6 +393,7 @@ func NewProject(m model) (*Project, error) {
 		pause:   make(chan bool),
 		resume:  make(chan bool),
 		stop:    make(chan bool),
+		next:    make(chan bool),
 		pattern: make(map[int]*pattern),
 	}
 
@@ -460,18 +467,17 @@ func (s *sequencer) Play(ids ...int) {
 		return
 	}
 
-	// next pattern patcher
-	go func() {
-		t := time.NewTimer(time.Duration(60000/pattern.tempo) * time.Millisecond)
-		t.C
-		tick := time.NewTicker(
-			time.Duration(60000/pattern.tempo) * time.Millisecond)
-
-	}()
+	s.currentPattern = id
+	s.countdown = int(pattern.scale.change)
 
 	for i := 0; i <= 5; i++ {
 		voice := voice(i)
 		if track, ok := s.pattern[id].track[voice]; ok {
+			// block if changing pattern is on
+			if pattern.changingPattern {
+				pattern.changingPattern = false
+				<-s.next
+			}
 
 			go func() {
 				// check if track has preset
@@ -495,18 +501,12 @@ func (s *sequencer) Play(ids ...int) {
 					}
 				}
 			}()
-
 			var scl float64
 			switch pattern.scale.mode {
 			case PTN:
 				scl = track.scale.scale
 			case TRK:
 				scl = pattern.scale.scale
-			}
-
-			// block it if changing pattern is on
-			if changingPattern {
-				<-transition
 			}
 
 			tick := time.NewTicker(
@@ -541,13 +541,21 @@ func (s *sequencer) Play(ids ...int) {
 						}
 					}
 				}()
-
 			loop:
 				for {
 					select {
 					case <-tick.C:
-						if count > s.pattern[id].scale.length {
+						if count > pattern.scale.length {
 							count = 0
+						}
+
+						if pattern.changingPattern {
+							s.countdown--
+						}
+
+						if s.countdown == 0 && pattern.changingPattern {
+							s.next <- true
+							break loop
 						}
 
 						counter <- count
@@ -610,8 +618,10 @@ func (s *sequencer) Stop() {
 // Next 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
 // if used and not found, an empty default pattern should be returned - silence
 // Second number indicates jump to specific pattern number rather the next in line.
-func (s *sequencer) Next(pattern int) *sequencer {
-	return s
+func (s *sequencer) Next(id int) {
+	s.pattern[s.currentPattern].changingPattern = true
+	s.pattern[id].changingPattern = true
+	s.Play(id)
 }
 
 func (s *sequencer) Chain(patterns ...int) *sequencer {
