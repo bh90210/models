@@ -569,19 +569,20 @@ func (s *sequencer) Play(ids ...int) {
 							if len(s.chains) > s.currentChain {
 								pattern.changingPattern = true
 								go s.chainChange(s.chains[s.currentChain])
-								s.next <- true
-								break loop
+								// s.next <- true
+								// break loop
 							} else {
 								pattern.changingPattern = true
 								s.currentChain = 0
 								go s.chainChange(s.chains[0])
-								s.next <- true
-								break loop
+								// s.next <- true
+								// break loop
 							}
+							s.next <- true
+							break loop
 						}
 
-						if (s.changeCountdown == 0 && pattern.changingPattern) ||
-							(count == 0 && len(s.chains) != 0 && pattern.changingPattern) {
+						if s.changeCountdown == 0 && pattern.changingPattern {
 							s.next <- true
 							break loop
 						}
@@ -589,18 +590,6 @@ func (s *sequencer) Play(ids ...int) {
 						if pattern.changingPattern {
 							s.changeCountdown--
 						}
-
-						// if (count+1) > pattern.scale.length && len(s.chains) != 0 && !pattern.changingPattern {
-						// 	s.currentChain++
-						// 	if len(s.chains) > s.currentChain {
-						// 		pattern.changingPattern = true
-						// 		go s.chainChange(s.chains[s.currentChain])
-						// 	} else {
-						// 		pattern.changingPattern = true
-						// 		s.currentChain = 0
-						// 		go s.chainChange(s.chains[0])
-						// 	}
-						// }
 
 						// send the current count to lock patcher
 						counter <- count
