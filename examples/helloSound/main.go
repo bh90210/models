@@ -39,6 +39,7 @@ func main() {
 	// p.Pattern(INTRO).Track(em.T1).Trig(4).Lock(preset1)
 
 	p.Pattern(INTRO).Track(em.T2).Trig(8).Lock(preset1)
+	p.Pattern(INTRO).Track(em.T2).Trig(0).Nudge(900)
 	// p.Pattern(INTRO).Track(em.T1).Trig(12).Lock(preset2)
 
 	// // snare
@@ -81,8 +82,12 @@ func main() {
 	// p.Next()
 
 	p.Play(INTRO)
-	// p.Next(INTRO)
-
+	// time.Sleep(2 * time.Second)
+	// p.Pause()
+	// time.Sleep(1 * time.Second)
+	// p.Resume()
+	// // p.Next(INTRO)
+	// time.Sleep(1 * time.Second)
 	// p.Stop()
 
 	// free

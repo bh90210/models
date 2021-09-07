@@ -306,6 +306,8 @@ type Project struct {
 
 // Sequencer .
 type sequencer struct {
+	mu *sync.Mutex
+
 	// midi fields
 	drv midi.Driver
 	in  midi.In
@@ -315,8 +317,9 @@ type sequencer struct {
 	pattern map[int]*pattern
 
 	// playtime fields
-	tempo  chan float64
 	pause  chan bool
+	resume chan bool
+	stop   chan bool
 	chains []int
 	// fillMode chan bool
 	// chances chan float64
@@ -324,7 +327,6 @@ type sequencer struct {
 
 	scaleLock bool
 	trigLock  bool
-	// lastPlayedTrig trig
 }
 
 type free struct {
@@ -357,7 +359,7 @@ type trig struct {
 	lock preset
 
 	scale *scale
-	// nudge float64
+	nudge float64
 	// condition float64
 }
 
@@ -371,26 +373,25 @@ type note struct {
 // Project
 //
 
-var mu *sync.Mutex
-
 // NewProject initiates and returns a *Project struct.
 // TODO: better documentation
 func NewProject(m model) (*Project, error) {
-	mu = new(sync.Mutex)
-
 	drv, err := driver.New()
 	if err != nil {
 		return nil, err
 	}
 
 	sequencer := &sequencer{
-		drv:   drv,
-		tempo: make(chan float64),
+		mu:      new(sync.Mutex),
+		drv:     drv,
+		pause:   make(chan bool),
+		resume:  make(chan bool),
+		stop:    make(chan bool),
+		pattern: make(map[int]*pattern),
 	}
 
 	// find elektron and assign it to in/out
 	var helperIn, helperOut bool
-	// mu.Lock()
 	ins, _ := drv.Ins()
 	for _, in := range ins {
 		if strings.Contains(in.String(), string(m)) {
@@ -422,11 +423,6 @@ func NewProject(m model) (*Project, error) {
 
 	wr := writer.New(sequencer.out)
 	sequencer.wr = wr
-	// mu.Unlock()
-
-	sequencer.pattern = make(map[int]*pattern)
-	sequencer.tempo = make(chan float64)
-	// sequencer.lastPlayedTrig = trig{note: &note{key: C1}}
 
 	return &Project{
 		model:     m,
@@ -532,11 +528,9 @@ func (s *sequencer) Play(ids ...int) {
 					}
 				}()
 
-				// loop:
+			loop:
 				for {
 					select {
-					case newTempo := <-s.tempo:
-						tick.Reset(time.Duration(60000/(newTempo*scl)) * time.Millisecond)
 					case <-tick.C:
 						if count > s.pattern[id].scale.length {
 							count = 0
@@ -556,6 +550,10 @@ func (s *sequencer) Play(ids ...int) {
 								s.scaleLock = false
 							}
 
+							if trig.nudge != 0 {
+								time.Sleep(time.Duration(trig.nudge) * time.Millisecond)
+							}
+
 							s.noteon(voice,
 								trig.note.key,
 								trig.note.velocity)
@@ -569,7 +567,9 @@ func (s *sequencer) Play(ids ...int) {
 						count++
 
 					case <-s.pause:
-						// play <- true
+						<-s.resume
+					case <-s.stop:
+						break loop
 					}
 				}
 			}()
@@ -589,12 +589,15 @@ func (s *sequencer) Next(pattern int) *sequencer {
 
 // Pause .
 func (s *sequencer) Pause() {
-
+	s.pause <- true
 }
 
-// SetVolume .
-func (s *sequencer) Volume(value int8) {
+func (s *sequencer) Resume() {
+	s.resume <- true
+}
 
+func (s *sequencer) Stop() {
+	s.stop <- true
 }
 
 func (s *sequencer) Chain(patterns ...int) *sequencer {
@@ -602,11 +605,6 @@ func (s *sequencer) Chain(patterns ...int) *sequencer {
 		s.chains = append(s.chains, pattern)
 	}
 
-	return s
-}
-
-func (s *sequencer) Tempo(tempo float64) *sequencer {
-	s.tempo <- tempo
 	return s
 }
 
@@ -631,31 +629,31 @@ func (s *sequencer) Close() {
 }
 
 func (s *sequencer) noteon(t voice, n notes, vel int8) {
-	mu.Lock()
+	s.mu.Lock()
 	s.wr.SetChannel(uint8(t))
 	writer.NoteOn(s.wr, uint8(n), uint8(vel))
-	mu.Unlock()
+	s.mu.Unlock()
 }
 
 func (s *sequencer) noteoff(t voice, n notes) {
-	mu.Lock()
+	s.mu.Lock()
 	s.wr.SetChannel(uint8(t))
 	writer.NoteOff(s.wr, uint8(n))
-	mu.Unlock()
+	s.mu.Unlock()
 }
 
 func (s *sequencer) cc(t voice, par Parameter, val int8) {
-	mu.Lock()
+	s.mu.Lock()
 	s.wr.SetChannel(uint8(t))
 	writer.ControlChange(s.wr, uint8(par), uint8(val))
-	mu.Unlock()
+	s.mu.Unlock()
 }
 
 func (s *sequencer) pc(t voice, pc int8) {
-	mu.Lock()
+	s.mu.Lock()
 	s.wr.SetChannel(uint8(t))
 	writer.ProgramChange(s.wr, uint8(pc))
-	mu.Unlock()
+	s.mu.Unlock()
 }
 
 //
@@ -708,7 +706,6 @@ func (p *pattern) Tempo(tempo float64) *pattern {
 func (p *pattern) Track(id voice) *track {
 	if _, ok := p.track[id]; !ok {
 		p.track[id] = &track{
-			// scale:  &scale{length: 15, scale: 1.0},
 			preset: defaultPreset(id),
 			trig:   make(map[int]*trig),
 			scale: &scale{
@@ -740,9 +737,7 @@ func (t *track) Preset(p preset) *track {
 // SetParameter assigned a parameter to the preset.
 // First argument is a Parameter type and second value an int8.
 func (t *track) Parameter(parameter Parameter, value int8) *track {
-	// mu.Lock()
 	t.preset[parameter] = value
-	// mu.Unlock()
 	return t
 }
 
@@ -801,6 +796,11 @@ func (t *trig) Note(key notes, length float64, velocity int8) {
 
 func (t *trig) Scale(factor float64) *trig {
 	t.scale = &scale{scale: factor}
+	return t
+}
+
+func (t *trig) Nudge(amount float64) *trig {
+	t.nudge = amount
 	return t
 }
 
