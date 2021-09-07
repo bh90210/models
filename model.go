@@ -466,9 +466,10 @@ func (s *sequencer) Play(ids ...int) {
 		if track, ok := s.pattern[id].track[voice]; ok {
 
 			var scl float64
-			if track.scale != nil {
+			switch pattern.scale.mode {
+			case PTN:
 				scl = track.scale.scale
-			} else {
+			case TRK:
 				scl = pattern.scale.scale
 			}
 
@@ -675,6 +676,10 @@ func (p *pattern) Track(id voice) *track {
 			// scale:  &scale{length: 15, scale: 1.0},
 			preset: defaultPreset(id),
 			trig:   make(map[int]*trig),
+			scale: &scale{
+				length: 15,
+				scale:  1.0,
+			},
 		}
 	}
 
@@ -708,7 +713,9 @@ func (t *track) Parameter(parameter Parameter, value int8) *track {
 
 func (t *track) Trig(id int) *trig {
 	if _, ok := t.trig[id]; !ok {
-		t.trig[id] = &trig{note: &note{C4, 4, 126}}
+		t.trig[id] = &trig{
+			note: &note{C4, 4, 126},
+		}
 	}
 
 	return t.trig[id]

@@ -20,12 +20,12 @@ func main() {
 	defer p.Close()
 
 	p.Pattern(INTRO).
-		Scale(em.PTN, 15, 4.0, 2).
+		Scale(em.TRK, 15, 4.0, 2).
 		Tempo(125.0)
 
 	p.Pattern(INTRO).Track(em.T1).Scale(15, 1.0)
 
-	p.Pattern(INTRO).Track(em.T1).Trig(1).Scale(2.5)
+	// p.Pattern(INTRO).Track(em.T1).Trig(1).Scale(2.5)
 
 	// kick
 	kick := []int{0, 4, 8, 12}
@@ -41,7 +41,8 @@ func main() {
 
 	// hi-hat
 	for i := 0; i <= 15; i++ {
-		p.Pattern(INTRO).Track(em.T3).Trig(i)
+		p.Pattern(INTRO).Track(em.T3).Trig(i).Scale(float64(i))
+		// p.Pattern(INTRO).Track(em.T3).Trig(i)
 	}
 
 	// tom
