@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math/rand"
+
 	m "github.com/athenez/models"
 )
 
@@ -12,81 +14,105 @@ const (
 )
 
 func main() {
-	// start a new project
-	p, err := m.NewProject(m.CYCLES)
+	// new project
+	project, err := m.NewProject(m.CYCLES)
 	if err != nil {
 		panic(err)
 	}
-	defer p.Close()
+	defer project.Close()
 
-	p.Pattern(INTRO).
-		Scale(m.TRK, 15, 4.0, 0).
-		Tempo(250.0)
+	// intro pattern
+	p0 := project.Pattern(INTRO).
+		Scale(m.TRK, 4, 1.0, 0). // problem: scale does not work
+		Tempo(120.0)
 
-	p.Pattern(INTRO).Track(m.T2).Scale(15, 3.0)
-
-	// // kick
+	// track 1
+	p0t1 := p0.Track(m.T1)
+	p0t1.Scale(15, 2.0) // problem: len\gth does not work, it follows pattern's setting
 	kick := []int{0, 4, 8, 12}
 	for _, v := range kick {
-		p.Pattern(INTRO).Track(m.T2).Trig(v).Note(m.A4, 200, 120)
+		p0t1.Trig(v).Note(m.A4, 50, 60)
 	}
 
-	// preset1 := m.PT3()
-	// preset1[m.GATE] = 1
-	// preset1[m.PUNCH] = 1
-	// preset1[m.DECAY] = 120
-	// // p.Pattern(INTRO).Track(m.T1).Trig(0).Lock(preset1)
-	// // p.Pattern(INTRO).Track(m.T1).Trig(4).Lock(preset1)
-
-	// p.Pattern(INTRO).Track(m.T2).Trig(8).Lock(preset1)
-	// p.Pattern(INTRO).Track(m.T2).Trig(0).Nudge(250)
-	// // p.Pattern(INTRO).Track(m.T1).Trig(12).Lock(preset2)
-
-	// // snare
-	// snare := []int{0, 4, 8, 12}
+	// // track 2
+	// p0t2 := p0.Track(m.T2)
+	// snare := []int{2, 6, 10, 14}
 	// for _, v := range snare {
-	// 	p.Pattern(INTRO).Track(m.T1).Trig(v)
+	// 	p0t2.Trig(v).Note(m.A4, 50, 60)
 	// }
 
-	// // hi-hat
-	// for i := 0; i <= 15; i++ {
-	// 	p.Pattern(INTRO).Track(m.T3).Trig(i).Scale(float64(i))
-	// 	// p.Pattern(INTRO).Track(m.T3).Trig(i)
-	// }
-
-	// // tom
-	// tom := []int{2, 3, 6, 7, 10, 11, 14, 15}
-	// for _, v := range tom {
-	// 	p.Pattern(INTRO).Track(m.T4).Trig(v)
-	// }
-
-	// // tone
-	// tone := []int{5, 9, 10}
-	// for _, v := range tone {
-	// 	p.Pattern(INTRO).Track(m.T5).Trig(v)
-	// }
-
-	// // synth
-	// synth := []int{3, 7, 9}
-	// for _, v := range synth {
-	// 	p.Pattern(INTRO).Track(m.T6).Trig(v)
-	// }
-
-	// preset := make(map[m.Parameter]int8)
-	// preset := m.PT1()
-	// preset[m.COLOR] = 100
-	// p.Pattern(INTRO).Track(m.T1).Preset(preset)
-	// p.Pattern(INTRO).Track(m.T1).Trig(0).Lock(preset)
-	// p.Pattern(VERSE).
-	// 	Scale(m.TRK, 15, 4.0, 4).
-	// 	Tmpo(250.0)
-
-	p.Pattern(VERSE).Scale(m.TRK, 15, 1.0, 7).Tempo(250.0).Track(m.T2).Scale(15, 3.0)
-
-	// kick = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
-	for _, v := range kick {
-		p.Pattern(VERSE).Track(m.T2).Trig(v).Note(m.A4, 200, 120)
+	// track 3
+	p0t3 := p0.Track(m.T3)
+	p0t3.Scale(15, 2.0)
+	hh := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
+	for _, v := range hh {
+		p0t3.Trig(v).Note(m.A4, 50, 60).Nudge(float64(rand.Intn(12)))
 	}
 
-	p.Chain(INTRO, VERSE).Play()
+	// // track 4
+	// p0t4 := p0.Track(m.T4)
+	// perc := []int{1, 3, 5, 7, 9, 11, 13, 15}
+	// for _, v := range perc {
+	// 	p0t4.Trig(v).Note(m.A4, 50, 60).Nudge(float64(rand.Intn(20)))
+	// }
+
+	// // track 5
+	// p0t5 := p0.Track(m.T5)
+	// tone := []int{1, 5, 9, 13}
+	// for _, v := range tone {
+	// 	p0t5.Trig(v).Note(m.A4, 50, 60).Nudge(float64(rand.Intn(15)))
+	// }
+
+	// // track 6
+	// p0t6 := p0.Track(m.T6)
+	// chord := []int{3, 7, 15}
+	// for _, v := range chord {
+	// 	p0t6.Trig(v).Note(m.A4, 50, 60)
+	// }
+
+	//verse
+
+	// track 1
+
+	// track 2
+
+	// track 3
+
+	// track 4
+
+	// track 5
+
+	// track 6
+
+	// chorus
+
+	// track 1
+
+	// track 2
+
+	// track 3
+
+	// track 4
+
+	// track 5
+
+	// track 6
+
+	// outro
+
+	// track 1
+
+	// track 2
+
+	// track 3
+
+	// track 4
+
+	// track 5
+
+	// track 6
+
+	// play
+	project.Play(INTRO)
+	// project.Chain(INTRO, VERSE, CHORUS, OUTRO).Play()
 }

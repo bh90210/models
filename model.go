@@ -515,15 +515,18 @@ func (s *sequencer) Play(ids ...int) {
 			}()
 
 			var scl float64
+			var lng int
 			switch pattern.scale.mode {
 			case PTN:
-				scl = track.scale.scale
-			case TRK:
+				lng = pattern.scale.length
 				scl = pattern.scale.scale
+			case TRK:
+				lng = track.scale.length
+				scl = track.scale.scale
 			}
 
 			tick := time.NewTicker(
-				time.Duration(60000/(pattern.tempo*scl)) * time.Millisecond)
+				time.Duration(60000/((pattern.tempo*2)*scl)) * time.Millisecond)
 
 			go func() {
 				var count int
@@ -560,11 +563,13 @@ func (s *sequencer) Play(ids ...int) {
 					case <-tick.C:
 						// if count is bigger than pattern/track length reset to zero
 						// and start looping over the start.
-						if count > pattern.scale.length {
+						if count > lng {
+							// if count > pattern.scale.length {
 							count = 0
 						}
 
-						if (count+1) > pattern.scale.length && len(s.chains) != 0 && !pattern.changingPattern {
+						if (count+1) > lng && len(s.chains) != 0 && !pattern.changingPattern {
+							// if (count+1) > pattern.scale.length && len(s.chains) != 0 && !pattern.changingPattern {
 							s.currentChain++
 							if len(s.chains) > s.currentChain {
 								pattern.changingPattern = true
@@ -598,11 +603,12 @@ func (s *sequencer) Play(ids ...int) {
 							// scale check/reset
 							switch {
 							case trig.scale != nil:
-								tick.Reset(time.Duration(60000/(pattern.tempo*trig.scale.scale)) * time.Millisecond)
+								tick.Reset(time.Duration(60000/((pattern.tempo*2)*trig.scale.scale)) * time.Millisecond)
 								s.scaleLock = true
+								// continue
 
 							case s.scaleLock:
-								tick.Reset(time.Duration(60000/(pattern.tempo*scl)) * time.Millisecond)
+								tick.Reset(time.Duration(60000/((pattern.tempo*2)*scl)) * time.Millisecond)
 								s.scaleLock = false
 							}
 
@@ -670,7 +676,7 @@ func (s *sequencer) Pattern(id int) *pattern {
 		s.pattern[id] = &pattern{
 			track: make(map[voice]*track),
 			scale: &scale{PTN, 15, 1.0, 15},
-			tempo: 120,
+			tempo: 120 * 2,
 		}
 	}
 
@@ -753,6 +759,7 @@ func (f *free) PC(t voice, pc int8) {
 // If scaleMode is set to track TRK the provided scale settings are used as default to the rest of the tracks.
 // This mimics synth's own functionality.
 func (p *pattern) Scale(mode scaleMode, length int, scale float64, change int8) *pattern {
+	p.scale.mode = mode
 	p.scale.length = length
 	p.scale.scale = scale
 	p.scale.change = change
@@ -760,7 +767,7 @@ func (p *pattern) Scale(mode scaleMode, length int, scale float64, change int8) 
 }
 
 func (p *pattern) Tempo(tempo float64) *pattern {
-	p.tempo = tempo
+	p.tempo = tempo * 2
 	return p
 }
 
@@ -786,7 +793,8 @@ func (p *pattern) Track(id voice) *track {
 // SetScale sets a new scale for the track.
 // If not set a default one is used.
 func (t *track) Scale(length int, factor float64) *track {
-	t.scale = &scale{length: length, scale: factor}
+	t.scale.length = length
+	t.scale.scale = factor
 	return t
 }
 
@@ -813,33 +821,6 @@ func (t *track) Trig(id int) *trig {
 }
 
 //
-// scale
-//
-
-// Length sets the step length (amount of steps) of the pattern/track.
-// func (s *scale) Length(length int) *scale {
-// 	s.length = length
-// 	return s
-// }
-
-// Scale controls the speed the playback in multiples of the current tempo. It offers seven possible
-// settings, 1/8X, 1/4X, 1/2X, 3/4X, 1X, 3/2X and 2X. A setting of 1/8X plays back the pattern at one-eighth of
-// the set tempo. 3/4X plays the pattern back at three-quarters of the tempo; 3/2X plays back the pattern
-// twice as fast as the 3/4X setting. 2X makes the pattern play at twice the BPM.
-// func (s *scale) Scale(scl float64) *scale {
-// 	s.scale = scl
-// 	return s
-// }
-
-// Change controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
-// regarding cueing and chaining. If CHG is set to OFF, the default change length is INF (infinite) in TRACK
-// mode and the same value as LEN in PATTERN mode.
-// func (s *scale) Change(chg int8) *scale {
-// 	s.change = chg
-// 	return s
-// }
-
-//
 // trig
 //
 
@@ -849,10 +830,12 @@ func (t *trig) Lock(preset preset) *trig {
 }
 
 // Note .
-func (t *trig) Note(key notes, length float64, velocity int8) {
+func (t *trig) Note(key notes, length float64, velocity int8) *trig {
 	t.note.key = key
 	t.note.length = length
 	t.note.velocity = velocity
+
+	return t
 }
 
 func (t *trig) Scale(factor float64) *trig {
@@ -885,3 +868,30 @@ func (n *note) Length(length float64) {
 func (n *note) Velocity(velocity int8) {
 	n.velocity = velocity
 }
+
+//
+// scale
+//
+
+// Length sets the step length (amount of steps) of the pattern/track.
+// func (s *scale) Length(length int) *scale {
+// 	s.length = length
+// 	return s
+// }
+
+// Scale controls the speed the playback in multiples of the current tempo. It offers seven possible
+// settings, 1/8X, 1/4X, 1/2X, 3/4X, 1X, 3/2X and 2X. A setting of 1/8X plays back the pattern at one-eighth of
+// the set tempo. 3/4X plays the pattern back at three-quarters of the tempo; 3/2X plays back the pattern
+// twice as fast as the 3/4X setting. 2X makes the pattern play at twice the BPM.
+// func (s *scale) Scale(scl float64) *scale {
+// 	s.scale = scl
+// 	return s
+// }
+
+// Change controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
+// regarding cueing and chaining. If CHG is set to OFF, the default change length is INF (infinite) in TRACK
+// mode and the same value as LEN in PATTERN mode.
+// func (s *scale) Change(chg int8) *scale {
+// 	s.change = chg
+// 	return s
+// }
