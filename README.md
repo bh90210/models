@@ -10,7 +10,7 @@ Go package to programmatically control [Elektron's](https://www.elektron.se/) **
 
 ### Go
 
-Install Go https://golang.org/doc/install
+Install Go https://golang.org/doc/install.
 
 ### RtMidi
 
@@ -61,13 +61,13 @@ func main() {
 }
 
 ```
-There are four Free methods to use, `Preset` to set preset on the fly, `Note` to fire a note, `CC` to send a single control change message && `PC` for program changes. 
+There are four Free methods to use, `Preset` to set preset on the fly, `Note` to fire a note on/off for given duration, `CC` to send a single control change message && `PC` for program changes. 
 
 ### Sequencer
 
 _For an in-depth tutorial on how to use the sequencer [read this]() Hackernoon post._
 
-The sequencer is implemented to mirror the original machine's functionality as close as reasonable/possible. You can expect the `Play` method to play given loop indefinitely, like the original, `Change` to change you to a new pattern, `Chain` to allow for multiple patterns to be chain together in serries etc.
+The sequencer is implemented to mirror the original machine's functionality as close as reasonable/possible. You can expect the `Play` method to play given loop indefinitely, `Change` to change you to a new pattern, `Chain` to allow for multiple patterns to be chained together in serries etc.
 
 Here is a single 16-bar example utilizing all six tracks:
 ```go
