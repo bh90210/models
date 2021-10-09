@@ -1,8 +1,10 @@
 <img src="https://user-images.githubusercontent.com/22690219/130872109-150ac61f-ad69-4bfb-8f10-3337abcb6551.png" alt="drawing" width="350"/> <img src="https://i.imgur.com/pJbgSUh.png" alt="drawing" width="350"/>
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/bh90210/models.svg)](https://pkg.go.dev/github.com/bh90210/models)
+
 # elektron:models
 
-A Go package to programmatically interact with [elektron](https://www.elektron.se/)'s **model:cycles** & **model:samples** via midi.
+Go package to programmatically control [Elektron's](https://www.elektron.se/) **model:cycles** & **model:samples** via midi.
 
 ## Prerequisites
 
@@ -30,14 +32,16 @@ For more information see the [formulae page](https://formulae.brew.sh/formula/rt
 
 `Help needed.`
 
-## Usage
+## Quick Use
 
-_complete examples can be found in the [examples](https://github.com/bh90210/elektronmodels/tree/master/examples/) folder_
+_complete examples can be found in the [examples](https://github.com/bh90210/elektronmodels/tree/master/examples/) folder._
 
-The relevant cycles/samples manuals' part for this library is the `APPENDIX A: MIDI SPECIFICATIONS`.
+_The relevant cycles/samples manuals' part for this library is the `APPENDIX A: MIDI SPECIFICATIONS`._
 
 <img src="https://i.imgur.com/Yrs6YS3.png" alt="drawing" width="350"/> <img src="https://i.imgur.com/cmil9NG.png" alt="drawing" width="350"/>
 
 ### Free
+
+
 
 ### Sequencer

@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	em "github.com/athenez/models"
+	em "github.com/bh90210/models"
 )
 
 func main() {
@@ -13,50 +13,36 @@ func main() {
 		panic(err)
 	}
 	defer p.Close()
-	// free
-	var i int = 500
-	p.Free.CC(em.T1, em.MACHINE, 1)
-	p.Free.CC(em.T1, em.GATE, 0)
-	p.Free.CC(em.T1, em.COLOR, 100)
-	p.Free.CC(em.T1, em.CONTOUR, 0)
-	p.Free.CC(em.T1, em.SWEEP, 100)
-	p.Free.CC(em.T1, em.REVERB, 0)
-	p.Free.Note(em.T1, em.C4, 120, 200)
-	p.Free.CC(em.T1, em.MACHINE, 2)
-	time.Sleep(time.Duration(i) * time.Millisecond)
 
-	p.Free.CC(em.T1, em.GATE, 1)
-	p.Free.CC(em.T1, em.COLOR, 120)
-	p.Free.CC(em.T1, em.CONTOUR, 0)
-	p.Free.CC(em.T1, em.SWEEP, 120)
-	p.Free.CC(em.T1, em.REVERB, 120)
-	p.Free.CC(em.T1, em.REVERBSIZE, 120)
-	p.Free.Note(em.T1, em.A4, 120, 500)
-	p.Free.CC(em.T1, em.MACHINE, 6)
-	time.Sleep(time.Duration(i*4) * time.Millisecond)
+	// reproduce helloSound example using Free API
+	var noteLength int = 500
 
-	p.Free.CC(em.T1, em.GATE, 0)
-	p.Free.CC(em.T1, em.COLOR, 100)
-	p.Free.CC(em.T1, em.CONTOUR, 0)
-	p.Free.CC(em.T1, em.SWEEP, 100)
-	p.Free.CC(em.T1, em.REVERB, 0)
-	p.Free.CC(em.T1, em.REVERBSIZE, 10)
-	p.Free.Note(em.T1, em.D6, 120, 1500)
-	go func() {
-		var color, contour, sweep em.Parameter
-		color = 100
-		sweep = 100
-		contour = 0
-		for {
-			color -= 1
-			sweep -= 1
-			contour += 1
-			time.Sleep(10 * time.Millisecond)
-			p.Free.CC(em.T1, em.COLOR, int8(color))
-			p.Free.CC(em.T1, em.CONTOUR, int8(contour))
-			p.Free.CC(em.T1, em.SWEEP, int8(sweep))
-			p.Free.CC(em.T1, em.SHAPE, int8(sweep))
-		}
-	}()
-	time.Sleep(2 * time.Second)
+	defaultPresetT1 := em.PT1()
+	p.Free.Preset(em.T1, defaultPresetT1)
+	p.Free.Note(em.T1, em.C4, 120, float64(noteLength))
+	time.Sleep(time.Duration(noteLength) * time.Millisecond)
+
+	p.Free.Note(em.T2, em.C4, 120, float64(noteLength), em.PT2())
+	time.Sleep(time.Duration(noteLength) * time.Millisecond)
+
+	p.Free.Preset(em.T3, em.PT3())
+	p.Free.CC(em.T3, em.DELAY, 0)
+	p.Free.Note(em.T3, em.C4, 120, float64(noteLength))
+	time.Sleep(time.Duration(noteLength) * time.Millisecond)
+
+	preset4 := em.PT4()
+	p.Free.Preset(em.T4, preset4)
+	preset4 = make(map[em.Parameter]int8)
+	preset4[em.DELAY] = 0
+	p.Free.Preset(em.T4, preset4)
+	p.Free.Note(em.T4, em.C4, 120, float64(noteLength))
+	time.Sleep(time.Duration(noteLength) * time.Millisecond)
+
+	p.Free.Note(em.T5, em.C4, 120, float64(noteLength), em.PT5())
+	time.Sleep(time.Duration(noteLength) * time.Millisecond)
+
+	p.Free.Note(em.T6, em.C4, 120, float64(noteLength), em.PT6())
+	time.Sleep(time.Duration(noteLength) * time.Millisecond)
+
+	p.Close()
 }

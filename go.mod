@@ -1,4 +1,4 @@
-module github.com/athenez/models
+module github.com/bh90210/models
 
 go 1.16
 

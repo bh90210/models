@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	m "github.com/athenez/models"
+	m "github.com/bh90210/models"
 )
 
 func main() {

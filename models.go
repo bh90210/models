@@ -1,4 +1,4 @@
-package elektronmodels
+package models
 
 import (
 	"fmt"
@@ -225,7 +225,7 @@ const (
 type Parameter int8
 
 const (
-	NOTE       Parameter = 3
+	// NOTE       Parameter = 3
 	TRACKLEVEL Parameter = 17
 	MUTE       Parameter = 94
 	PAN        Parameter = 10
@@ -304,7 +304,6 @@ type Project struct {
 	Free *free
 }
 
-// Sequencer .
 type sequencer struct {
 	mu *sync.Mutex
 
@@ -675,7 +674,7 @@ func (s *sequencer) Pattern(id int) *pattern {
 	if _, ok := s.pattern[id]; !ok {
 		s.pattern[id] = &pattern{
 			track: make(map[voice]*track),
-			scale: &scale{PTN, 15, 1.0, 15},
+			scale: &scale{PTN, 15, 0.5, 15},
 			tempo: 120 * 2,
 		}
 	}
@@ -724,34 +723,6 @@ func (s *sequencer) chainChange(id int) {
 }
 
 //
-// free
-//
-
-func (f *free) Preset(track voice, preset preset) {
-	for parameter, value := range preset {
-		f.midi.cc(track, parameter, value)
-	}
-}
-
-// Note
-// duration in milliseconds (ms)
-func (f *free) Note(track voice, note notes, velocity int8, duration float64) {
-	f.midi.noteon(track, note, velocity)
-	go func() {
-		time.Sleep(time.Millisecond * time.Duration(duration))
-		f.midi.noteoff(track, note)
-	}()
-}
-
-func (f *free) CC(track voice, parameter Parameter, value int8) {
-	f.midi.cc(track, parameter, value)
-}
-
-func (f *free) PC(t voice, pc int8) {
-	f.midi.pc(t, pc)
-}
-
-//
 // pattern
 //
 
@@ -778,7 +749,7 @@ func (p *pattern) Track(id voice) *track {
 			trig:   make(map[int]*trig),
 			scale: &scale{
 				length: 15,
-				scale:  1.0,
+				scale:  0.1,
 			},
 		}
 	}
@@ -812,9 +783,7 @@ func (t *track) Parameter(parameter Parameter, value int8) *track {
 
 func (t *track) Trig(id int) *trig {
 	if _, ok := t.trig[id]; !ok {
-		t.trig[id] = &trig{
-			note: &note{C4, 4, 126},
-		}
+		t.trig[id] = &trig{note: &note{C4, 0.5, 110}}
 	}
 
 	return t.trig[id]
@@ -831,10 +800,10 @@ func (t *trig) Lock(preset preset) *trig {
 
 // Note .
 func (t *trig) Note(key notes, length float64, velocity int8) *trig {
+	// t.note = &note{key, length, velocity}
 	t.note.key = key
 	t.note.length = length
 	t.note.velocity = velocity
-
 	return t
 }
 
@@ -867,6 +836,40 @@ func (n *note) Length(length float64) {
 // Velocity .
 func (n *note) Velocity(velocity int8) {
 	n.velocity = velocity
+}
+
+//
+// free
+//
+
+func (f *free) Preset(track voice, preset preset) {
+	for parameter, value := range preset {
+		f.midi.cc(track, parameter, value)
+	}
+}
+
+// Note
+// duration in milliseconds (ms)
+func (f *free) Note(track voice, note notes, velocity int8, duration float64, pre ...preset) {
+	if len(pre) != 0 {
+		for i, _ := range pre {
+			f.Preset(track, pre[i])
+		}
+	}
+
+	f.midi.noteon(track, note, velocity)
+	go func() {
+		time.Sleep(time.Millisecond * time.Duration(duration))
+		f.midi.noteoff(track, note)
+	}()
+}
+
+func (f *free) CC(track voice, parameter Parameter, value int8) {
+	f.midi.cc(track, parameter, value)
+}
+
+func (f *free) PC(t voice, pc int8) {
+	f.midi.pc(t, pc)
 }
 
 //
