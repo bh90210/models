@@ -17,6 +17,7 @@ import (
 
 type model string
 
+// Model
 const (
 	CYCLES  model = "Model:Cycles"
 	SAMPLES model = "Model:Samples"
@@ -24,6 +25,7 @@ const (
 
 type voice int8
 
+// Voices/Tracks
 const (
 	T1 voice = iota
 	T2
@@ -35,6 +37,7 @@ const (
 
 type notes int8
 
+// Keys/letter notes
 const (
 	A0 notes = iota + 21
 	As0
@@ -181,6 +184,7 @@ const (
 
 type chords int8
 
+// Chords
 const (
 	Unisonx2 chords = iota
 	Unisonx3
@@ -256,6 +260,7 @@ const (
 	REVERSE      Parameter = 18
 )
 
+// Reverb & Delay settings
 const (
 	DELAYTIME Parameter = iota + 85
 	DELAYFEEDBACK
@@ -263,6 +268,7 @@ const (
 	REVERBTONE
 )
 
+// LFO settings
 const (
 	LFOSPEED Parameter = iota + 102
 	LFOMULTIPIER
@@ -276,6 +282,7 @@ const (
 
 type machine int8
 
+// Machines
 const (
 	KICK machine = iota
 	SNARE
@@ -447,8 +454,7 @@ func NewProject(m model) (*Project, error) {
 // sequencer
 //
 
-// Play
-// Is blocking
+// Play starts playing the given pattern. It is a blocking function.
 func (s *sequencer) Play(ids ...int) {
 	// if user did not specify a pattern neither Chain method used, print an error
 	if len(ids) == 0 && len(s.chains) == 0 {
@@ -641,15 +647,17 @@ func (s *sequencer) Play(ids ...int) {
 	<-block
 }
 
-// Pause .
+// Pause the sequencer.
 func (s *sequencer) Pause() {
 	s.pause <- true
 }
 
+// Resume the sequencer.
 func (s *sequencer) Resume() {
 	s.resume <- true
 }
 
+// Stop the sequencer.
 func (s *sequencer) Stop() {
 	s.stop <- true
 }
@@ -663,6 +671,7 @@ func (s *sequencer) Change(id int) {
 	s.Play(id)
 }
 
+// Chain allows for chaining in a series loop multiple patterns at once.
 func (s *sequencer) Chain(patterns ...int) *sequencer {
 	s.chains = append(s.chains, patterns...)
 	return s
@@ -729,6 +738,14 @@ func (s *sequencer) chainChange(id int) {
 // Scale sets the scale for the pattern.
 // If scaleMode is set to track TRK the provided scale settings are used as default to the rest of the tracks.
 // This mimics synth's own functionality.
+// Length sets the step length (amount of steps) of the pattern/track.
+// Scale controls the speed the playback in multiples of the current tempo. It offers seven possible
+// settings, 1/8X, 1/4X, 1/2X, 3/4X, 1X, 3/2X and 2X. A setting of 1/8X plays back the pattern at one-eighth of
+// the set tempo. 3/4X plays the pattern back at three-quarters of the tempo; 3/2X plays back the pattern
+// twice as fast as the 3/4X setting. 2X makes the pattern play at twice the BPM.
+// Change controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
+// regarding cueing and chaining. If CHG is set to OFF, the default change length is INF (infinite) in TRACK
+// mode and the same value as LEN in PATTERN mode.
 func (p *pattern) Scale(mode scaleMode, length int, scale float64, change int8) *pattern {
 	p.scale.mode = mode
 	p.scale.length = length
@@ -737,11 +754,13 @@ func (p *pattern) Scale(mode scaleMode, length int, scale float64, change int8) 
 	return p
 }
 
+// Tempo set's pattern tempo.
 func (p *pattern) Tempo(tempo float64) *pattern {
 	p.tempo = tempo * 2
 	return p
 }
 
+// Track return a new track.
 func (p *pattern) Track(id voice) *track {
 	if _, ok := p.track[id]; !ok {
 		p.track[id] = &track{
@@ -769,6 +788,7 @@ func (t *track) Scale(length int, factor float64) *track {
 	return t
 }
 
+// Preset applies preset to track.
 func (t *track) Preset(p preset) *track {
 	t.preset = p
 	return t
@@ -781,6 +801,7 @@ func (t *track) Parameter(parameter Parameter, value int8) *track {
 	return t
 }
 
+// Trig returns a new trig.
 func (t *track) Trig(id int) *trig {
 	if _, ok := t.trig[id]; !ok {
 		t.trig[id] = &trig{note: &note{C4, 0.5, 110}}
@@ -793,12 +814,13 @@ func (t *track) Trig(id int) *trig {
 // trig
 //
 
+// Lock allows for setting trigger/preset locks.
 func (t *trig) Lock(preset preset) *trig {
 	t.lock = preset
 	return t
 }
 
-// Note .
+// Note sets note's key, length and velocity to trig.
 func (t *trig) Note(key notes, length float64, velocity int8) *trig {
 	// t.note = &note{key, length, velocity}
 	t.note.key = key
@@ -807,11 +829,13 @@ func (t *trig) Note(key notes, length float64, velocity int8) *trig {
 	return t
 }
 
+// Scale allows for setting individual trig scale.
 func (t *trig) Scale(factor float64) *trig {
 	t.scale = &scale{scale: factor}
 	return t
 }
 
+// Nudge sets a delay prior to firing the trig.
 func (t *trig) Nudge(amount float64) *trig {
 	t.nudge = amount
 	return t
@@ -821,7 +845,7 @@ func (t *trig) Nudge(amount float64) *trig {
 // note
 //
 
-// Key .
+// Key set note's key.
 func (n *note) Key(key notes) {
 	n.key = key
 }
@@ -833,7 +857,7 @@ func (n *note) Length(length float64) {
 	n.length = length
 }
 
-// Velocity .
+// Velocity sets note's velocity.
 func (n *note) Velocity(velocity int8) {
 	n.velocity = velocity
 }
@@ -842,14 +866,15 @@ func (n *note) Velocity(velocity int8) {
 // free
 //
 
+// Preset immediately sets (CC) provided parameters.
 func (f *free) Preset(track voice, preset preset) {
 	for parameter, value := range preset {
 		f.midi.cc(track, parameter, value)
 	}
 }
 
-// Note
-// duration in milliseconds (ms)
+// Note fires immediately a midi note on signal followed by a note off specified duration in milliseconds (ms).
+// Optionally user can pass a preset too for convenience.
 func (f *free) Note(track voice, note notes, velocity int8, duration float64, pre ...preset) {
 	if len(pre) != 0 {
 		for i, _ := range pre {
@@ -864,37 +889,12 @@ func (f *free) Note(track voice, note notes, velocity int8, duration float64, pr
 	}()
 }
 
+// CC control change.
 func (f *free) CC(track voice, parameter Parameter, value int8) {
 	f.midi.cc(track, parameter, value)
 }
 
+// PC program control change.
 func (f *free) PC(t voice, pc int8) {
 	f.midi.pc(t, pc)
 }
-
-//
-// scale
-//
-
-// Length sets the step length (amount of steps) of the pattern/track.
-// func (s *scale) Length(length int) *scale {
-// 	s.length = length
-// 	return s
-// }
-
-// Scale controls the speed the playback in multiples of the current tempo. It offers seven possible
-// settings, 1/8X, 1/4X, 1/2X, 3/4X, 1X, 3/2X and 2X. A setting of 1/8X plays back the pattern at one-eighth of
-// the set tempo. 3/4X plays the pattern back at three-quarters of the tempo; 3/2X plays back the pattern
-// twice as fast as the 3/4X setting. 2X makes the pattern play at twice the BPM.
-// func (s *scale) Scale(scl float64) *scale {
-// 	s.scale = scl
-// 	return s
-// }
-
-// Change controls for how long the active pattern plays before it loops or a cued (the next selected) pattern begins to play. If CHG is set to 64, the pattern behaves like a pattern consisting of 64 steps
-// regarding cueing and chaining. If CHG is set to OFF, the default change length is INF (infinite) in TRACK
-// mode and the same value as LEN in PATTERN mode.
-// func (s *scale) Change(chg int8) *scale {
-// 	s.change = chg
-// 	return s
-// }
