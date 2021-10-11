@@ -311,6 +311,7 @@ type Project struct {
 	Free *Free
 }
 
+// Sequencer methods allows for Play, Pause, Resume, Stop.
 type Sequencer struct {
 	mu *sync.Mutex
 
@@ -340,10 +341,12 @@ type Sequencer struct {
 	trigLock  bool
 }
 
+// Free mathods allows to by-pass the sequencer.
 type Free struct {
 	midi *Sequencer
 }
 
+// Pattern holds all relevant tracks information for given pattern.
 type Pattern struct {
 	track map[voice]*Track
 	scale *scale
@@ -353,6 +356,7 @@ type Pattern struct {
 	changingPattern bool
 }
 
+// Track holds all relevant information for track.
 type Track struct {
 	preset
 	scale *scale
@@ -368,8 +372,9 @@ type scale struct {
 
 type preset map[Parameter]int8
 
+// Trig holds all relevant information for trig.
 type Trig struct {
-	note *note
+	note *Note
 	lock preset
 
 	scale *scale
@@ -377,7 +382,8 @@ type Trig struct {
 	// condition float64
 }
 
-type note struct {
+// Note holds all relevant information for given trig.
+type Note struct {
 	key      notes
 	length   float64
 	velocity int8
@@ -677,7 +683,7 @@ func (s *Sequencer) Pattern(id int) *Pattern {
 	if _, ok := s.pattern[id]; !ok {
 		s.pattern[id] = &Pattern{
 			track: make(map[voice]*Track),
-			scale: &scale{PTN, 15, 0.5, 15},
+			scale: &scale{PTN, 15, 1.0, 15},
 			tempo: 120 * 2,
 		}
 	}
@@ -782,7 +788,7 @@ func (t *Track) Parameter(parameter Parameter, value int8) *Track {
 // Trig returns a new trig.
 func (t *Track) Trig(id int) *Trig {
 	if _, ok := t.trig[id]; !ok {
-		t.trig[id] = &Trig{note: &note{C4, 0.5, 110}}
+		t.trig[id] = &Trig{note: &Note{C4, 200, 110}}
 	}
 
 	return t.trig[id]
@@ -824,19 +830,19 @@ func (t *Trig) Nudge(amount float64) *Trig {
 //
 
 // Key set note's key.
-func (n *note) Key(key notes) {
+func (n *Note) Key(key notes) {
 	n.key = key
 }
 
 // Length Trig Length sets the duration of the notes. When a note has finished playing a NOTE OFF command
 // is sent. The INF setting equals infinite note length. This parameter only applies if GATE is set to ON or
 // when sending trig length data over MIDI. (0.125–128, INF)
-func (n *note) Length(length float64) {
+func (n *Note) Length(length float64) {
 	n.length = length
 }
 
 // Velocity sets note's velocity.
-func (n *note) Velocity(velocity int8) {
+func (n *Note) Velocity(velocity int8) {
 	n.velocity = velocity
 }
 

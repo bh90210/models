@@ -7,7 +7,6 @@ import (
 )
 
 func main() {
-	// start a new project
 	p, err := m.NewProject(m.CYCLES)
 	if err != nil {
 		panic(err)
@@ -15,7 +14,7 @@ func main() {
 	defer p.Close()
 
 	// reproduce helloSound example using Free API
-	var noteLength int = 500
+	var noteLength int = 250
 
 	defaultPresetT1 := m.PT1()
 	p.Free.Preset(m.T1, defaultPresetT1)
