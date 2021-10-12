@@ -34,7 +34,7 @@ For more information see the [formulae page](https://formulae.brew.sh/formula/rt
 
 ## Quick Use
 
-_complete examples can be found in the [examples](https://github.com/bh90210/elektronmodels/tree/master/examples/) folder._
+_A complete example can be found in the [example](https://github.com/bh90210/elektronmodels/tree/master/example/) folder._
 
 _The relevant cycles/samples manuals' part for this library is the `APPENDIX A: MIDI SPECIFICATIONS`._
 
