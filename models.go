@@ -11,10 +11,6 @@ import (
 	driver "gitlab.com/gomidi/rtmididrv"
 )
 
-//
-// constants
-//
-
 type model string
 
 // Model
