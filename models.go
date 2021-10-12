@@ -299,10 +299,6 @@ const (
 	TRK scaleMode = false
 )
 
-//
-// data structures
-//
-
 // Project long description of the data structure, methods, behaviors and useage.
 type Project struct {
 	model
@@ -316,10 +312,6 @@ type Project struct {
 }
 
 type preset map[Parameter]int8
-
-//
-// Project
-//
 
 // NewProject initiates and returns a *Project struct.
 func NewProject(m model) (*Project, error) {
