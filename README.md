@@ -69,7 +69,7 @@ _For an in-depth tutorial on how to use the sequencer [read this]() Hackernoon p
 
 The sequencer is implemented to mirror the original machine's functionality as close as reasonable/possible. You can expect the `Play` method to play given loop indefinitely, `Change` to change you to a new pattern, `Chain` to allow for multiple patterns to be chained together in serries etc.
 
-Here is a single 16-bar example utilizing all six tracks:
+Here is a single 16-bar example utilizing four tracks and two patterns:
 ```go
 package main
 
@@ -89,37 +89,39 @@ func main() {
 	}
 	defer project.Close()
 
+	// intro pattern
 	intro := project.Pattern(INTRO)
-
+	// track 1
 	t1 := intro.Track(m.T1)
 	t1.Trig(0)
 	t1.Trig(8)
-
+	// track 2
 	t2 := intro.Track(m.T2)
 	t2.Trig(4)
 	t2.Trig(12)
-
+	// track 3
 	t3 := intro.Track(m.T3)
 	t3.Trig(0)
 	t3.Trig(4)
 	t3.Trig(8)
 	t3.Trig(12)
-
+	// track 4
 	t4 := intro.Track(m.T4)
 	t4.Trig(5)
 
+	// verse pattern
 	verse := project.Pattern(VERSE)
-
+	// track 1
 	t1 = verse.Track(m.T1)
 	t1.Trig(0)
 	t1.Trig(6)
 	t1.Trig(8)
 	t1.Trig(14)
-
+	// track 2
 	t2 = verse.Track(m.T2)
 	t2.Trig(4)
 	t2.Trig(12)
-
+	// track 3
 	t3 = verse.Track(m.T3)
 	t3.Trig(0)
 	t3.Trig(2)
@@ -129,7 +131,7 @@ func main() {
 	t3.Trig(10)
 	t3.Trig(12)
 	t3.Trig(14)
-
+	// track 4
 	t4 = verse.Track(m.T4)
 	t4.Trig(5)
 	t4.Trig(11)

@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -462,6 +463,7 @@ func NewProject(m model) (*Project, error) {
 
 // Play starts playing the given pattern. It is a blocking function.
 func (s *Sequencer) Play(ids ...int) {
+	block := make(chan bool)
 	// if user did not specify a pattern neither Chain method used, print an error
 	if len(ids) == 0 && len(s.chains) == 0 {
 		fmt.Println("error: no pattern selected")
@@ -480,7 +482,7 @@ func (s *Sequencer) Play(ids ...int) {
 			id = s.chains[s.currentChain]
 		}
 	} else {
-		pattern = s.pattern[id]
+		pattern = s.pattern[ids[0]]
 		id = ids[0]
 	}
 
@@ -582,18 +584,20 @@ func (s *Sequencer) Play(ids ...int) {
 							s.currentChain++
 							if len(s.chains) > s.currentChain {
 								pattern.changingPattern = true
-								go s.chainChange(s.chains[s.currentChain])
+								s.chainChange(s.chains[s.currentChain])
 							} else {
 								pattern.changingPattern = true
 								s.currentChain = 0
-								go s.chainChange(s.chains[0])
+								s.chainChange(s.chains[0])
 							}
-							s.next <- true
-							break loop
+							// s.next <- true
+							// block <- true
+							// break loop
 						}
 
 						if s.changeCountdown == 0 && pattern.changingPattern {
 							s.next <- true
+							// block <- true
 							break loop
 						}
 
@@ -643,7 +647,7 @@ func (s *Sequencer) Play(ids ...int) {
 		}
 	}
 
-	block := make(chan bool)
+	// block := make(chan bool)
 	<-block
 }
 
@@ -662,13 +666,12 @@ func (s *Sequencer) Stop() {
 	s.stop <- true
 }
 
-// Next 	// can be used without a number too - if used without a number and there is no next currently playing pattern keeps on looping
-// if used and not found, an empty default pattern should be returned - silence
-// Second number indicates jump to specific pattern number rather the next in line.
 func (s *Sequencer) Change(id int) {
-	s.pattern[s.currentPattern].changingPattern = true
+	log.Println("current", s.currentPattern)
+	log.Println("changing to", id)
+	// s.pattern[s.currentPattern].changingPattern = true
 	s.pattern[id].changingPattern = true
-	s.Play(id)
+	go s.Play(id)
 }
 
 // Chain allows for chaining in a series loop multiple patterns at once.
@@ -719,8 +722,9 @@ func (s *Sequencer) pc(t voice, pc int8) {
 }
 
 func (s *Sequencer) chainChange(id int) {
-	s.pattern[id].changingPattern = true
-	s.Play(id)
+	// s.pattern[id].changingPattern = true
+	// go s.Play(id)
+	s.Change(id)
 }
 
 //

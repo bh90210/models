@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"time"
+
 	m "github.com/bh90210/models"
 )
 
@@ -42,10 +45,10 @@ func main() {
 	verse := project.Pattern(VERSE)
 
 	t1 = verse.Track(m.T1)
-	t1.Trig(0)
-	t1.Trig(6)
-	t1.Trig(8)
-	t1.Trig(14)
+	// t1.Trig(0)
+	// t1.Trig(6)
+	// t1.Trig(8)
+	// t1.Trig(14)
 
 	t2 = verse.Track(m.T2)
 	t2.Trig(4)
@@ -65,5 +68,14 @@ func main() {
 	t4.Trig(5)
 	t4.Trig(11)
 
-	project.Chain(INTRO, INTRO, INTRO, VERSE).Play()
+	// project.Chain(INTRO, VERSE, INTRO, INTRO, VERSE, INTRO, VERSE, VERSE).Play()
+	go project.Play(INTRO)
+	for {
+		time.Sleep(4000 * time.Millisecond)
+		fmt.Println("yo")
+		project.Change(INTRO)
+		time.Sleep(4000 * time.Millisecond)
+		fmt.Println("yo2")
+		project.Change(VERSE)
+	}
 }
