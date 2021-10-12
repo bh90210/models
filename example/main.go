@@ -13,7 +13,6 @@ func main() {
 	}
 	defer p.Close()
 
-	// reproduce helloSound example using Free API
 	var noteLength int = 250
 
 	defaultPresetT1 := m.PT1()
