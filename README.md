@@ -55,7 +55,7 @@ func main() {
 	p, _ := m.NewProject(em.CYCLES)
 	defer p.Close()
 
-	p.Free.Note(m.T1, m.C4, 120, 200, m.PT1())
+	p.Note(m.T1, m.C4, 120, 200, m.PT1())
 	time.Sleep(200 * time.Millisecond)
 }
 
