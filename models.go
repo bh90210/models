@@ -180,7 +180,7 @@ const (
 	Bf8 Notes = As8
 )
 
-// Chords are all chords supported by the machines mapped custom type.
+// Chords are all chords supported by the machines mapped onto a custom type.
 type Chords int8
 
 // Chords
