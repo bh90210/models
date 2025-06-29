@@ -1,6 +1,6 @@
 module github.com/bh90210/models
 
-go 1.17
+go 1.22
 
 require (
 	gitlab.com/gomidi/midi v1.23.3

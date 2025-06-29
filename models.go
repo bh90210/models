@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -180,7 +179,7 @@ const (
 	Bf8 Notes = As8
 )
 
-// Chords are all chords supported by the machines mapped onto a custom type.
+// Chords are all chords supported by the machines mapped custom type.
 type Chords int8
 
 // Chords
@@ -326,18 +325,19 @@ func NewProject(m model) (*Project, error) {
 
 	p.mu.Lock()
 	ins, _ := drv.Ins()
+	// log.Fatal(ins)
 	for _, in := range ins {
-		if strings.Contains(in.String(), string(m)) {
-			p.in = in
-			helperIn = true
-		}
+		// if strings.Contains(in.String(), string(m)) {
+		p.in = in
+		helperIn = true
+		// }
 	}
 	outs, _ := drv.Outs()
 	for _, out := range outs {
-		if strings.Contains(out.String(), string(m)) {
-			p.out = out
-			helperOut = true
-		}
+		// if strings.Contains(out.String(), string(m)) {
+		p.out = out
+		helperOut = true
+		// }
 	}
 	// check if nothing found
 	if !helperIn && !helperOut {
