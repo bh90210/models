@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,12 +19,12 @@ const (
 	SAMPLES model = "Model:Samples"
 )
 
-// Voice represents a track on the physical machine.
-type Voice int8
+// Channel represents a physical midi channel.
+type Channel int8
 
 // Voices/Tracks
 const (
-	T1 Voice = iota
+	T1 Channel = iota
 	T2
 	T3
 	T4
@@ -292,6 +293,17 @@ const (
 	CHORD
 )
 
+type MidiCom interface {
+	Preset(channel Channel, preset Preset) error
+	Note(channel Channel, note Notes, velocity int8, duration float64) error
+	CC(channel Channel, parameter Parameter, value int8) error
+	PC(channel Channel, pc int8) error
+	Incoming() chan []byte
+	Close()
+}
+
+var _ MidiCom = (*Project)(nil)
+
 // Project long description of the data structure, methods, behaviors and useage.
 type Project struct {
 	model
@@ -303,9 +315,6 @@ type Project struct {
 	out midi.Out
 	wr  *writer.Writer
 }
-
-// Preset represents a machine's preset.
-type Preset map[Parameter]int8
 
 // NewProject initiates and returns a *Project struct.
 func NewProject(m model) (*Project, error) {
@@ -325,20 +334,21 @@ func NewProject(m model) (*Project, error) {
 
 	p.mu.Lock()
 	ins, _ := drv.Ins()
-	// log.Fatal(ins)
 	for _, in := range ins {
-		// if strings.Contains(in.String(), string(m)) {
-		p.in = in
-		helperIn = true
-		// }
+		if strings.Contains(in.String(), string(m)) {
+			p.in = in
+			helperIn = true
+		}
 	}
+
 	outs, _ := drv.Outs()
 	for _, out := range outs {
-		// if strings.Contains(out.String(), string(m)) {
-		p.out = out
-		helperOut = true
-		// }
+		if strings.Contains(out.String(), string(m)) {
+			p.out = out
+			helperOut = true
+		}
 	}
+
 	// check if nothing found
 	if !helperIn && !helperOut {
 		return nil, fmt.Errorf("device %s not found", m)
@@ -362,36 +372,64 @@ func NewProject(m model) (*Project, error) {
 }
 
 // Preset immediately sets (CC) provided parameters.
-func (p *Project) Preset(track Voice, preset Preset) {
+func (p *Project) Preset(track Channel, preset Preset) error {
 	for parameter, value := range preset {
-		p.cc(track, parameter, value)
+		err := p.CC(track, parameter, value)
+		if err != nil {
+			fmt.Println("Error sending CC:", err)
+			return err
+		}
 	}
+
+	return nil
 }
 
 // Note fires immediately a midi note on signal followed by a note off specified duration in milliseconds (ms).
 // Optionally user can pass a preset too for convenience.
-func (p *Project) Note(track Voice, note Notes, velocity int8, duration float64, pre ...Preset) {
-	if len(pre) != 0 {
-		for i := range pre {
-			p.Preset(track, pre[i])
-		}
+func (p *Project) Note(track Channel, note Notes, velocity int8, duration float64) error {
+	p.wr.SetChannel(uint8(track))
+	err := writer.NoteOn(p.wr, uint8(note), uint8(velocity))
+	if err != nil {
+		fmt.Println("Error sending NoteOn:", err)
+		return err
 	}
 
-	p.noteon(track, note, velocity)
-	go func() {
-		time.Sleep(time.Millisecond * time.Duration(duration))
-		p.noteoff(track, note)
-	}()
+	time.Sleep(time.Millisecond * time.Duration(duration))
+
+	p.wr.SetChannel(uint8(track))
+	err = writer.NoteOff(p.wr, uint8(note))
+	if err != nil {
+		fmt.Println("Error sending NoteOff:", err)
+		return err
+	}
+
+	return nil
 }
 
 // CC control change.
-func (p *Project) CC(track Voice, parameter Parameter, value int8) {
-	p.cc(track, parameter, value)
+func (p *Project) CC(track Channel, parameter Parameter, value int8) error {
+	p.wr.SetChannel(uint8(track))
+	return writer.ControlChange(p.wr, uint8(parameter), uint8(value))
 }
 
 // PC Project control change.
-func (p *Project) PC(t Voice, pc int8) {
-	p.pc(t, pc)
+func (p *Project) PC(t Channel, pc int8) error {
+	p.wr.SetChannel(uint8(t))
+	return writer.ProgramChange(p.wr, uint8(pc))
+}
+
+// Read reads incoming midi data.
+func (p *Project) Incoming() chan []byte {
+	ch := make(chan []byte)
+	p.in.SetListener(func(p []byte, deltaMicroseconds int64) {
+		select {
+		case ch <- p:
+		default:
+			fmt.Println("no models receiver")
+		}
+	})
+
+	return ch
 }
 
 // Close midi connection. Use it with defer after creating a new project.
@@ -401,25 +439,8 @@ func (p *Project) Close() {
 	p.drv.Close()
 }
 
-func (p *Project) noteon(t Voice, n Notes, vel int8) {
-	p.wr.SetChannel(uint8(t))
-	writer.NoteOn(p.wr, uint8(n), uint8(vel))
-}
-
-func (p *Project) noteoff(t Voice, n Notes) {
-	p.wr.SetChannel(uint8(t))
-	writer.NoteOff(p.wr, uint8(n))
-}
-
-func (p *Project) cc(t Voice, par Parameter, val int8) {
-	p.wr.SetChannel(uint8(t))
-	writer.ControlChange(p.wr, uint8(par), uint8(val))
-}
-
-func (p *Project) pc(t Voice, pc int8) {
-	p.wr.SetChannel(uint8(t))
-	writer.ProgramChange(p.wr, uint8(pc))
-}
+// Preset represents a machine's preset.
+type Preset map[Parameter]int8
 
 // PT1 is the cycles preset for track 1.
 func PT1() Preset {

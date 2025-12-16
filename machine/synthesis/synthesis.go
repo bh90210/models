@@ -1,25 +1,22 @@
 package synthesis
 
 import (
-	"math/rand"
 	"time"
 
 	"github.com/bh90210/models/machine"
 	"github.com/bh90210/models/machine/bd"
+	"github.com/bh90210/models/machine/sd"
 )
 
 type Synthesis struct {
-	BDSampleRateReduction int
+	Tracks []*machine.Track
+	Events []machine.Events
 }
 
-func (s *Synthesis) SampleReduction(m *machine.Machine) {
-	if s.BDSampleRateReduction == 0 {
-		s.BDSampleRateReduction = 127
+func (s *Synthesis) Run() {
+	for _, events := range s.Events {
+		events.Run()
 	}
-
-	m.CC(bd.CHANNEL, bd.SAMPLERATEREDUCTION, int8(s.BDSampleRateReduction))
-
-	s.BDSampleRateReduction -= 5
 }
 
 func EqualDuration(x int, dur time.Duration) []time.Duration {
@@ -31,59 +28,167 @@ func EqualDuration(x int, dur time.Duration) []time.Duration {
 	return durations
 }
 
-func Position1(m *machine.Machine) {
-	m.CC(bd.CHANNEL, bd.LEVEL, 100)
-	m.CC(bd.CHANNEL, bd.PARAM1, 0)
-	m.CC(bd.CHANNEL, bd.PARAM2, 57)
-	m.CC(bd.CHANNEL, bd.PARAM3, 0)
-	m.CC(bd.CHANNEL, bd.PARAM4, 126)
-	m.CC(bd.CHANNEL, bd.PARAM5, 64)
-	m.CC(bd.CHANNEL, bd.PARAM6, 85)
-	m.CC(bd.CHANNEL, bd.PARAM7, 0)
-	m.CC(bd.CHANNEL, bd.PARAM8, 99)
-	m.CC(bd.CHANNEL, bd.AMDEPTH, 100)
-	m.CC(bd.CHANNEL, bd.AMRATE, 100)
-	m.CC(bd.CHANNEL, bd.EQFREQ, 98)
-	m.CC(bd.CHANNEL, bd.EQGAIN, 37)
-	m.CC(bd.CHANNEL, bd.FILTERBASEFRQ, 100)
-	m.CC(bd.CHANNEL, bd.FILTERWIDTH, 100)
-	m.CC(bd.CHANNEL, bd.FILTERQ, 100)
-	m.CC(bd.CHANNEL, bd.SAMPLERATEREDUCTION, 97)
-	m.CC(bd.CHANNEL, bd.DISTORTION, 0)
-	// m.CC(bd.CHANNEL, bd.VOLUME, 100)
-	m.CC(bd.CHANNEL, bd.PAN, 60)
-	m.CC(bd.CHANNEL, bd.DELAY, 0)
-	m.CC(bd.CHANNEL, bd.REVERB, 0)
-	m.CC(bd.CHANNEL, bd.LFOSPEED, 69)
-	m.CC(bd.CHANNEL, bd.LFOAMOUNT, 100)
-	m.CC(bd.CHANNEL, bd.LFOSHAPE, 100)
+func (s *Synthesis) Position1() {
+	for _, t := range s.Tracks {
+		t.Level = 127
+		t.Volume = 127
+		t.Param1 = 95
+		t.Param2 = 70
+		t.Param3 = 126
+		t.Param4 = 126
+		t.Param5 = 83
+		t.Param6 = 64
+		t.Param7 = 1
+		t.Param8 = 98
+		t.LFOSpeed = 8
+		t.LFOAmount = 45
+		t.LFOShape = 0
+		t.Pan = 60
+		t.Delay = 10
+		t.Reverb = 15
+
+		t.AMDepth = 0
+		t.AMRate = 0
+		t.EQFreq = 0
+		t.EQGain = 0
+		t.FilterBaseFrq = 0
+		t.FilterWidth = 127
+		t.FilterQ = 0
+		t.SampleRateReduction = 0
+		t.Distortion = 0
+	}
 }
 
-func Position2(m *machine.Machine) {
-	n := rand.Intn(127)
-	// m.CC(bd.CHANNEL, bd.LEVEL, int8(n))
-	m.CC(bd.CHANNEL, bd.PARAM1, int8(n))
-	m.CC(bd.CHANNEL, bd.PARAM2, int8(n))
-	// m.CC(bd.CHANNEL, bd.PARAM3, int8(n))
-	m.CC(bd.CHANNEL, bd.PARAM4, int8(n))
-	m.CC(bd.CHANNEL, bd.PARAM5, int8(n))
-	m.CC(bd.CHANNEL, bd.PARAM6, int8(n))
-	m.CC(bd.CHANNEL, bd.PARAM7, int8(n))
-	m.CC(bd.CHANNEL, bd.PARAM8, int8(n))
-	// m.CC(bd.CHANNEL, bd.AMDEPTH, int8(n))
-	// m.CC(bd.CHANNEL, bd.AMRATE, int8(n))
-	// m.CC(bd.CHANNEL, bd.EQFREQ, int8(n))
-	// m.CC(bd.CHANNEL, bd.EQGAIN, int8(n))
-	// m.CC(bd.CHANNEL, bd.FILTERBASEFRQ, int8(n))
-	// m.CC(bd.CHANNEL, bd.FILTERWIDTH, int8(n))
-	// m.CC(bd.CHANNEL, bd.FILTERQ, int8(n))
-	// m.CC(bd.CHANNEL, bd.SAMPLERATEREDUCTION, int8(n))
-	// m.CC(bd.CHANNEL, bd.DISTORTION, int8(n))
-	// // m.CC(bd.CHANNEL, bd.VOLUME, 100)
-	m.CC(bd.CHANNEL, bd.PAN, int8(n))
-	// m.CC(bd.CHANNEL, bd.DELAY, int8(n))
-	// m.CC(bd.CHANNEL, bd.REVERB, int8(n))
-	// m.CC(bd.CHANNEL, bd.LFOSPEED, int8(n))
-	// m.CC(bd.CHANNEL, bd.LFOAMOUNT, int8(n))
-	// m.CC(bd.CHANNEL, bd.LFOSHAPE, int8(n))
+func BDCC(m *machine.Machine, t machine.Track) {
+	m.CC(bd.CHANNEL, bd.LEVEL, t.Level)
+	m.CC(bd.CHANNEL, bd.PARAM1, t.Param1)
+	m.CC(bd.CHANNEL, bd.PARAM2, t.Param2)
+	m.CC(bd.CHANNEL, bd.PARAM3, t.Param3)
+	m.CC(bd.CHANNEL, bd.PARAM4, t.Param4)
+	m.CC(bd.CHANNEL, bd.PARAM5, t.Param5)
+	m.CC(bd.CHANNEL, bd.PARAM6, t.Param6)
+	m.CC(bd.CHANNEL, bd.PARAM7, t.Param7)
+	m.CC(bd.CHANNEL, bd.PARAM8, t.Param8)
+	m.CC(bd.CHANNEL, bd.AMDEPTH, t.AMDepth)
+	m.CC(bd.CHANNEL, bd.AMRATE, t.AMRate)
+	m.CC(bd.CHANNEL, bd.EQFREQ, t.EQFreq)
+	m.CC(bd.CHANNEL, bd.EQGAIN, t.EQGain)
+	m.CC(bd.CHANNEL, bd.FILTERBASEFRQ, t.FilterBaseFrq)
+	m.CC(bd.CHANNEL, bd.FILTERWIDTH, t.FilterWidth)
+	m.CC(bd.CHANNEL, bd.FILTERQ, t.FilterQ)
+	m.CC(bd.CHANNEL, bd.SAMPLERATEREDUCTION, t.SampleRateReduction)
+	m.CC(bd.CHANNEL, bd.DISTORTION, t.Distortion)
+	m.CC(bd.CHANNEL, bd.VOLUME, t.Volume)
+	m.CC(bd.CHANNEL, bd.PAN, t.Pan)
+	m.CC(bd.CHANNEL, bd.DELAY, t.Delay)
+	m.CC(bd.CHANNEL, bd.REVERB, t.Reverb)
+	m.CC(bd.CHANNEL, bd.LFOSPEED, t.LFOSpeed)
+	m.CC(bd.CHANNEL, bd.LFOAMOUNT, t.LFOAmount)
+	m.CC(bd.CHANNEL, bd.LFOSHAPE, t.LFOShape)
+}
+
+func SDCC(m *machine.Machine, t machine.Track) {
+	m.CC(sd.CHANNEL, sd.LEVEL, t.Level)
+	m.CC(sd.CHANNEL, sd.PARAM1, t.Param1)
+	m.CC(sd.CHANNEL, sd.PARAM2, t.Param2)
+	m.CC(sd.CHANNEL, sd.PARAM3, t.Param3)
+	m.CC(sd.CHANNEL, sd.PARAM4, t.Param4)
+	m.CC(sd.CHANNEL, sd.PARAM5, t.Param5)
+	m.CC(sd.CHANNEL, sd.PARAM6, t.Param6)
+	m.CC(sd.CHANNEL, sd.PARAM7, t.Param7)
+	m.CC(sd.CHANNEL, sd.PARAM8, t.Param8)
+	m.CC(sd.CHANNEL, sd.AMDEPTH, t.AMDepth)
+	m.CC(sd.CHANNEL, sd.AMRATE, t.AMRate)
+	m.CC(sd.CHANNEL, sd.EQFREQ, t.EQFreq)
+	m.CC(sd.CHANNEL, sd.EQGAIN, t.EQGain)
+	m.CC(sd.CHANNEL, sd.FILTERBASEFRQ, t.FilterBaseFrq)
+	m.CC(sd.CHANNEL, sd.FILTERWIDTH, t.FilterWidth)
+	m.CC(sd.CHANNEL, sd.FILTERQ, t.FilterQ)
+	m.CC(sd.CHANNEL, sd.SAMPLERATEREDUCTION, t.SampleRateReduction)
+	m.CC(sd.CHANNEL, sd.DISTORTION, t.Distortion)
+	m.CC(sd.CHANNEL, sd.VOLUME, t.Volume)
+	m.CC(sd.CHANNEL, sd.PAN, t.Pan)
+	m.CC(sd.CHANNEL, sd.DELAY, t.Delay)
+	m.CC(sd.CHANNEL, sd.REVERB, t.Reverb)
+	m.CC(sd.CHANNEL, sd.LFOSPEED, t.LFOSpeed)
+	m.CC(sd.CHANNEL, sd.LFOAMOUNT, t.LFOAmount)
+	m.CC(sd.CHANNEL, sd.LFOSHAPE, t.LFOShape)
+}
+
+func Rhythm1(i int, d time.Duration) time.Duration {
+	switch {
+	case i%23 == 0:
+		d = d * 2
+	case i%17 == 0:
+		d = d / 2
+	}
+
+	return d
+}
+
+func Rhythm2(i int, d time.Duration) time.Duration {
+	switch {
+	case i%7 == 0:
+		d = d * 7
+	case i%6 == 0:
+		d = d / 6
+	case i%5 == 0:
+		d = d * 5
+	case i%4 == 0:
+		d = d / 4
+	case i%3 == 0:
+		d = d * 3
+	case i%2 == 0:
+		d = d / 2
+	}
+
+	return d
+}
+
+func Rhythm3(i int, d time.Duration) time.Duration {
+	switch {
+	case i%9 == 0:
+		d = d * 9
+	case i%8 == 0:
+		d = d / 8
+	case i%7 == 0:
+		d = d * 7
+	case i%6 == 0:
+		d = d / 6
+	case i%5 == 0:
+		d = d * 5
+	case i%4 == 0:
+		d = d / 4
+	case i%3 == 0:
+		d = d * 3
+	case i%2 == 0:
+		d = d / 2
+	}
+
+	return d
+}
+
+func Rhythm4(i int, d time.Duration) time.Duration {
+	switch {
+	case i%11 == 0:
+		d = d * 11
+	case i%9 == 0:
+		d = d * 9
+	case i%8 == 0:
+		d = d / 8
+	case i%7 == 0:
+		d = d * 7
+	case i%6 == 0:
+		d = d / 6
+	case i%5 == 0:
+		d = d * 5
+	case i%4 == 0:
+		d = d / 4
+	case i%3 == 0:
+		d = d * 3
+	case i%2 == 0:
+		d = d / 2
+	}
+
+	return d
 }
