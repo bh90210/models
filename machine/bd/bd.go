@@ -3,6 +3,7 @@ package bd
 import "github.com/bh90210/models/machine"
 
 const (
+	TRACK   = 0
 	CHANNEL = 0  // Default channel for BD
 	NOTE    = 36 // BD
 )

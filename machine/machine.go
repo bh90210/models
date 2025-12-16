@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"strings"
 	"sync"
 	"time"
 
@@ -37,7 +38,10 @@ func New() (*Machine, error) {
 	}
 	outs, _ := drv.Outs()
 	for _, out := range outs {
-		p.out = out
+		// fmt.Println("Found MIDI output:", out.String())
+		if strings.Contains(out.String(), "Elektron") {
+			p.out = out
+		}
 	}
 
 	err = p.in.Open()
@@ -57,14 +61,14 @@ func New() (*Machine, error) {
 	return p, nil
 }
 
-func (s *Machine) PC(t models.Voice, pc int8) {
+func (s *Machine) PC(t models.Channel, pc int8) {
 	s.wr.SetChannel(uint8(t))
 	writer.ProgramChange(s.wr, uint8(pc))
 }
 
-func (s *Machine) CC(t Parameter, par Parameter, val int8) {
+func (s *Machine) CC(t Parameter, par Parameter, val uint8) {
 	s.wr.SetChannel(uint8(t))
-	writer.ControlChange(s.wr, uint8(par), uint8(val))
+	writer.ControlChange(s.wr, uint8(par), val)
 }
 
 // Close midi connection. Use it with defer after creating a new project.
