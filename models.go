@@ -312,10 +312,11 @@ type Project struct {
 
 	mu *sync.Mutex
 	// midi fields
-	drv midi.Driver
-	in  midi.In
-	out midi.Out
-	wr  *writer.Writer
+	drv      midi.Driver
+	in       midi.In
+	out      midi.Out
+	wr       *writer.Writer
+	listener chan []byte
 }
 
 // NewProject initiates and returns a *Project struct.
@@ -356,6 +357,15 @@ func NewProject(m model) (*Project, error) {
 		return nil, err
 	}
 
+	p.listener = make(chan []byte)
+	p.in.SetListener(func(d []byte, deltaMicroseconds int64) {
+		select {
+		case p.listener <- d:
+		default:
+			fmt.Println("no models receiver")
+		}
+	})
+
 	err = p.out.Open()
 	if err != nil {
 		return nil, err
@@ -368,7 +378,6 @@ func NewProject(m model) (*Project, error) {
 	return p, nil
 }
 
-// Preset immediately sets (CC) provided parameters.
 func (p *Project) Preset(track Channel, preset Preset) error {
 	for parameter, value := range preset {
 		err := p.CC(track, parameter, value)
@@ -381,8 +390,6 @@ func (p *Project) Preset(track Channel, preset Preset) error {
 	return nil
 }
 
-// Note fires immediately a midi note on signal followed by a note off specified duration in milliseconds (ms).
-// Optionally user can pass a preset too for convenience.
 func (p *Project) Note(track Channel, note Notes, velocity int8, duration float64) error {
 	p.wr.SetChannel(uint8(track))
 	err := writer.NoteOn(p.wr, uint8(note), uint8(velocity))
@@ -403,33 +410,20 @@ func (p *Project) Note(track Channel, note Notes, velocity int8, duration float6
 	return nil
 }
 
-// CC control change.
 func (p *Project) CC(track Channel, parameter Parameter, value int8) error {
 	p.wr.SetChannel(uint8(track))
 	return writer.ControlChange(p.wr, uint8(parameter), uint8(value))
 }
 
-// PC Project control change.
-func (p *Project) PC(t Channel, pc int8) error {
-	p.wr.SetChannel(uint8(t))
+func (p *Project) PC(track Channel, pc int8) error {
+	p.wr.SetChannel(uint8(track))
 	return writer.ProgramChange(p.wr, uint8(pc))
 }
 
-// Read reads incoming midi data.
 func (p *Project) Incoming() chan []byte {
-	ch := make(chan []byte)
-	p.in.SetListener(func(p []byte, deltaMicroseconds int64) {
-		select {
-		case ch <- p:
-		default:
-			fmt.Println("no models receiver")
-		}
-	})
-
-	return ch
+	return p.listener
 }
 
-// Close midi connection. Use it with defer after creating a new project.
 func (p *Project) Close() {
 	p.in.Close()
 	p.out.Close()
