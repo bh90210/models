@@ -12,8 +12,10 @@ import (
 	driver "gitlab.com/gomidi/rtmididrv"
 )
 
-const Nymphes string = "Nymphes"
-const nymphesChannel uint8 = 0
+const (
+	Nymphes string         = "Nymphes"
+	Channel models.Channel = 0
+)
 
 var _ models.MidiCom = (*Project)(nil)
 
@@ -85,7 +87,7 @@ func NewProject() (*Project, error) {
 	// Initialize MIDI writer.
 	wr := writer.New(p.out)
 	p.wr = wr
-	p.wr.SetChannel(nymphesChannel)
+	p.wr.SetChannel(uint8(Channel))
 	p.mu.Unlock()
 
 	return p, nil
@@ -93,7 +95,7 @@ func NewProject() (*Project, error) {
 
 func (p *Project) Preset(_ models.Channel, preset models.Preset) error {
 	for parameter, value := range preset {
-		err := p.CC(models.Channel(nymphesChannel), parameter, value)
+		err := p.CC(models.Channel(Channel), parameter, value)
 		if err != nil {
 			fmt.Println("Error sending CC:", err)
 			return err

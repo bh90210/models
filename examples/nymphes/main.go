@@ -7,13 +7,13 @@ import (
 )
 
 func main() {
-	nymphesSynth, err := nymphes.NewProject()
+	ns, err := nymphes.NewProject()
 	if err != nil {
 		panic(err)
 	}
-	defer nymphesSynth.Close()
+	defer ns.Close()
 
-	in := nymphesSynth.Incoming()
+	in := ns.Incoming()
 	go func() {
 		for {
 			val := <-in
@@ -22,10 +22,10 @@ func main() {
 	}()
 
 	for i := range 5 {
-		nymphesSynth.Note(0, 50, 120, 1500)
-		nymphesSynth.Note(0, 60, 120, 1500)
-		nymphesSynth.Note(0, 70, 120, 1500)
-		nymphesSynth.Note(0, 75, 120, 1500)
+		ns.Note(nymphes.Channel, 50, 120, 1500)
+		ns.Note(nymphes.Channel, 60, 120, 1500)
+		ns.Note(nymphes.Channel, 70, 120, 1500)
+		ns.Note(nymphes.Channel, 75, 120, 1500)
 
 		fmt.Println(i)
 	}
