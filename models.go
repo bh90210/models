@@ -293,6 +293,8 @@ const (
 	CHORD
 )
 
+var ErrNotImplemented = fmt.Errorf("not implemented")
+
 type MidiCom interface {
 	Preset(channel Channel, preset Preset) error
 	Note(channel Channel, note Notes, velocity int8, duration float64) error
@@ -329,15 +331,11 @@ func NewProject(m model) (*Project, error) {
 		drv:   drv,
 	}
 
-	// find elektron and assign it to in/out
-	var helperIn, helperOut bool
-
 	p.mu.Lock()
 	ins, _ := drv.Ins()
 	for _, in := range ins {
 		if strings.Contains(in.String(), string(m)) {
 			p.in = in
-			helperIn = true
 		}
 	}
 
@@ -345,12 +343,11 @@ func NewProject(m model) (*Project, error) {
 	for _, out := range outs {
 		if strings.Contains(out.String(), string(m)) {
 			p.out = out
-			helperOut = true
 		}
 	}
 
 	// check if nothing found
-	if !helperIn && !helperOut {
+	if p.in == nil && p.out == nil {
 		return nil, fmt.Errorf("device %s not found", m)
 	}
 

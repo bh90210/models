@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/bh90210/models"
 	"gitlab.com/gomidi/midi"
@@ -13,23 +12,32 @@ import (
 	driver "gitlab.com/gomidi/rtmididrv"
 )
 
-const (
-	turbo string = "Alesis Turbo"
-)
+const Turbo string = "Alesis Turbo"
+
+var Drums = map[uint8]string{
+	38: "Snare",
+	48: "Tom1",
+	45: "Tom2",
+	43: "Tom3",
+	4:  "HiHat Closed",
+	46: "HH",
+	49: "Crash",
+	51: "Ride",
+	36: "Kick",
+	21: "HH Foot",
+}
 
 var _ models.MidiCom = (*Project)(nil)
 
-// Project long description of the data structure, methods, behaviors and useage.
 type Project struct {
 	mu *sync.Mutex
 	// midi fields
-	drv midi.Driver
-	in  midi.In
-	out midi.Out
-	wr  *writer.Writer
+	drv      midi.Driver
+	in       midi.In
+	wr       *writer.Writer
+	listener chan []byte
 }
 
-// NewProject initiates and returns a *Project struct.
 func NewProject() (*Project, error) {
 	drv, err := driver.New()
 	if err != nil {
@@ -41,21 +49,16 @@ func NewProject() (*Project, error) {
 		drv: drv,
 	}
 
-	// Find turbo and assign it to in/out.
-	var helperIn bool
-
 	p.mu.Lock()
 	ins, _ := drv.Ins()
 	for _, in := range ins {
-		if strings.Contains(in.String(), turbo) {
+		if strings.Contains(in.String(), Turbo) {
 			p.in = in
-			helperIn = true
 		}
 	}
 
-	// check if nothing found
-	if !helperIn {
-		return nil, fmt.Errorf("device %s not found", turbo)
+	if p.in == nil {
+		return nil, fmt.Errorf("device %s not found", Turbo)
 	}
 
 	err = p.in.Open()
@@ -63,105 +66,47 @@ func NewProject() (*Project, error) {
 		return nil, err
 	}
 
-	drums := map[uint8]string{
-		38: "Snare",
-		48: "Tom1",
-		45: "Tom2",
-		43: "Tom3",
-		4:  "HiHat Closed",
-		46: "HH",
-		49: "Crash",
-		51: "Ride",
-		36: "Kick",
-		21: "HH Foot",
-	}
+	p.listener = make(chan []byte)
 
-	p.in.SetListener(func(p []byte, deltaMicroseconds int64) {
-		if bytes.Equal(p, []byte{248}) || p[1] == 44 {
+	p.in.SetListener(func(d []byte, deltaMicroseconds int64) {
+		// We are getting a non stop signal from 248. We don't know why this is happening. Needs some further investigation.
+		// Also we do nothing for the 44 messages as these are part of the foor high hat. This too needs further investigation as to what exactly is for.
+		if bytes.Equal(d, []byte{248}) || d[1] == 44 {
 			return
 		}
 
-		fmt.Println("MIDI IN:", drums[p[1]], p[2])
-		// fmt.Println("MIDI IN:", p)
+		select {
+		case p.listener <- d:
+		default:
+			fmt.Println("no turbo receiver", d)
+		}
 	})
-
-	// err = p.out.Open()
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// wr := writer.New(p.out)
-	// p.wr = wr
-
 	p.mu.Unlock()
 
 	return p, nil
 }
 
-// Preset immediately sets (CC) provided parameters.
 func (p *Project) Preset(track models.Channel, preset models.Preset) error {
-	for parameter, value := range preset {
-		err := p.CC(track, parameter, value)
-		if err != nil {
-			fmt.Println("Error sending CC:", err)
-			return err
-		}
-	}
-
-	return nil
+	return models.ErrNotImplemented
 }
 
-// Note fires immediately a midi note on signal followed by a note off specified duration in milliseconds (ms).
-// Optionally user can pass a preset too for convenience.
 func (p *Project) Note(track models.Channel, note models.Notes, velocity int8, duration float64) error {
-	p.wr.SetChannel(uint8(track))
-	err := writer.NoteOn(p.wr, uint8(note), uint8(velocity))
-	if err != nil {
-		fmt.Println("Error sending NoteOn:", err)
-		return err
-	}
-
-	time.Sleep(time.Millisecond * time.Duration(duration))
-	p.wr.SetChannel(uint8(track))
-	err = writer.NoteOff(p.wr, uint8(note))
-	if err != nil {
-		fmt.Println("Error sending NoteOff:", err)
-		return err
-	}
-
-	return nil
-
+	return models.ErrNotImplemented
 }
 
-// CC control change.
 func (p *Project) CC(track models.Channel, parameter models.Parameter, value int8) error {
-	p.wr.SetChannel(uint8(track))
-	return writer.ControlChange(p.wr, uint8(parameter), uint8(value))
+	return models.ErrNotImplemented
 }
 
-// PC Project control change.
 func (p *Project) PC(t models.Channel, pc int8) error {
-	p.wr.SetChannel(uint8(t))
-	return writer.ProgramChange(p.wr, uint8(pc))
+	return models.ErrNotImplemented
 }
 
-// Incoming reads incoming midi data.
 func (p *Project) Incoming() chan []byte {
-	ch := make(chan []byte)
-	p.in.SetListener(func(p []byte, deltaMicroseconds int64) {
-		select {
-		case ch <- p:
-		default:
-			fmt.Println("no turbo receiver")
-		}
-	})
-
-	return ch
+	return p.listener
 }
 
-// Close midi connection. Use it with defer after creating a new project.
 func (p *Project) Close() {
 	p.in.Close()
-	p.out.Close()
 	p.drv.Close()
 }
