@@ -7,20 +7,33 @@ import (
 	"github.com/bh90210/models"
 )
 
+// Degree represents a musical interval in terms of semitones.
 type Degree int
 
 const (
+	// Minor2nd Degree represents a minor second interval (1 semitone).
 	Minor2nd Degree = iota + 1
+	// Major2nd Degree represents a major second interval (2 semitones).
 	Major2nd
+	// Minor3rd Degree represents a minor third interval (3 semitones).
 	Minor3rd
+	// Major3rd Degree represents a major third interval (4 semitones).
 	Major3rd
+	// Perfect4th Degree represents a perfect fourth interval (5 semitones).
 	Perfect4th
+	// Tritone Degree represents a tritone interval (6 semitones).
 	Tritone
+	// Perfect5th Degree represents a perfect fifth interval (7 semitones).
 	Perfect5th
+	// Minor6th Degree represents a minor sixth interval (8 semitones).
 	Minor6th
+	// Major6th Degree represents a major sixth interval (9 semitones).
 	Major6th
+	// Minor7th Degree represents a minor seventh interval (10 semitones).
 	Minor7th
+	// Major7th Degree represents a major seventh interval (11 semitones).
 	Major7th
+	// Octave Degree represents an octave interval (12 semitones).
 	Octave
 )
 
@@ -33,9 +46,6 @@ const (
 type Pattern struct {
 	Midicom models.MidiCom
 	Notes   []Note
-	// Notes      []models.Notes
-	// Durations  []float64 // In milliseconds.
-	// Velocities []uint8
 	Channel models.Channel
 
 	Meta
@@ -43,8 +53,15 @@ type Pattern struct {
 
 type Note struct {
 	Note     models.Note
-	Duration float64
+	Duration float64 // In milliseconds.
 	Velocity int8
+	CC       map[int8]int8 // CC changes to apply when playing this note.
+	PC       *int8         // Program Change to apply when playing this note.
+}
+
+type Meta struct {
+	Synth string
+	Part  string
 }
 
 func (p *Pattern) Shift(shift Degree) Pattern {
@@ -84,21 +101,47 @@ func (p *Poly) GetPatterns() map[int][]Pattern {
 	return p.patterns
 }
 
-type Meta struct {
-	Synth string
-	Part  string
-}
-
 func Play(patterns Poly) error {
+	// Get all voices and their patterns.
 	allVoices := patterns.GetPatterns()
+	// Find how many voices we have.
 	length := len(allVoices)
 
 	wg := sync.WaitGroup{}
-	for voice := 0; voice < length; voice++ {
+	// Play all voices in parallel.
+	for voice := range length {
 		wg.Add(1)
+
+		// Read each voice's patterns concurrently.
 		go func(voice []Pattern) {
 			for _, pat := range voice {
+				if pat.Midicom == nil {
+					fmt.Println("No MidiCom assigned to pattern", pat.Meta)
+					wg.Done()
+					return
+				}
+
 				for _, n := range pat.Notes {
+					// First apply any PC or CC changes.
+					if n.PC != nil {
+						err := pat.Midicom.PC(pat.Channel, *n.PC)
+						if err != nil {
+							fmt.Println("Error sending PC:", err)
+							return
+						}
+					}
+
+					if n.CC != nil {
+						for cc, val := range n.CC {
+							err := pat.Midicom.CC(pat.Channel, models.Parameter(cc), val)
+							if err != nil {
+								fmt.Println("Error sending CC:", err)
+								return
+							}
+						}
+					}
+
+					// Now play the note.
 					err := pat.Midicom.Note(pat.Channel, n.Note, n.Velocity, n.Duration)
 					if err != nil {
 						fmt.Println("Error playing note:", err)
@@ -108,10 +151,10 @@ func Play(patterns Poly) error {
 			}
 
 			wg.Done()
-
 		}(allVoices[voice])
 	}
 
+	// Wait for all voices to finish.
 	wg.Wait()
 
 	return nil

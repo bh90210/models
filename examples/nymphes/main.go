@@ -23,6 +23,10 @@ func main() {
 
 	var poly pattern.Poly
 
+	// Generate the notes (melody.)
+
+	// Generate the duration + velocity (rhythm.) for each note.
+
 	notes1 := []pattern.Note{
 		{Note: 50, Duration: 500, Velocity: 100},
 		{Note: 50 + models.Note(pattern.Major3rd), Duration: 500, Velocity: 100},
