@@ -24,8 +24,8 @@ func main() {
 
 	var noteLength int = 50
 
-	defaultPresetT1 := m.PT1()
-	p.Preset(m.T1, defaultPresetT1)
+	// defaultPresetT1 := m.PT1()
+	// p.Preset(m.T1, defaultPresetT1)
 	p.CC(0, 16, 100)
 	p.Note(0, 36, 120, float64(noteLength))
 	time.Sleep(time.Duration(100 * time.Millisecond))
