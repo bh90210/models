@@ -93,18 +93,6 @@ func NewProject() (*Project, error) {
 	return p, nil
 }
 
-func (p *Project) Preset(_ models.Channel, preset models.Preset) error {
-	for parameter, value := range preset {
-		err := p.CC(models.Channel(Channel), parameter, value)
-		if err != nil {
-			fmt.Println("Error sending CC:", err)
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (p *Project) Note(_ models.Channel, note models.Note, velocity int8, duration float64) error {
 	err := writer.NoteOn(p.wr, uint8(note), uint8(velocity))
 	if err != nil {

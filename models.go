@@ -296,7 +296,6 @@ const (
 var ErrNotImplemented = fmt.Errorf("not implemented")
 
 type MidiCom interface {
-	Preset(channel Channel, preset Preset) error
 	Note(channel Channel, note Note, velocity int8, duration float64) error
 	CC(channel Channel, parameter Parameter, value int8) error
 	PC(channel Channel, pc int8) error
@@ -376,18 +375,6 @@ func NewProject(m model) (*Project, error) {
 	p.mu.Unlock()
 
 	return p, nil
-}
-
-func (p *Project) Preset(track Channel, preset Preset) error {
-	for parameter, value := range preset {
-		err := p.CC(track, parameter, value)
-		if err != nil {
-			fmt.Println("Error sending CC:", err)
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (p *Project) Note(track Channel, note Note, velocity int8, duration float64) error {

@@ -55,8 +55,8 @@ type Note struct {
 	Note     models.Note
 	Duration float64 // In milliseconds.
 	Velocity int8
-	CC       map[int8]int8 // CC changes to apply when playing this note.
-	PC       *int8         // Program Change to apply when playing this note.
+	CC       map[models.Parameter]int8 // CC changes to apply when playing this note.
+	PC       *int8                     // Program Change to apply when playing this note.
 }
 
 type Meta struct {
