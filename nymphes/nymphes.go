@@ -105,7 +105,7 @@ func (p *Project) Preset(_ models.Channel, preset models.Preset) error {
 	return nil
 }
 
-func (p *Project) Note(_ models.Channel, note models.Notes, velocity int8, duration float64) error {
+func (p *Project) Note(_ models.Channel, note models.Note, velocity int8, duration float64) error {
 	err := writer.NoteOn(p.wr, uint8(note), uint8(velocity))
 	if err != nil {
 		fmt.Println("Error sending NoteOn:", err)

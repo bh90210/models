@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
-
+	"github.com/bh90210/models"
 	"github.com/bh90210/models/nymphes"
+	"github.com/bh90210/models/pattern"
 )
 
 func main() {
@@ -21,12 +21,29 @@ func main() {
 		}
 	}()
 
-	for i := range 5 {
-		ns.Note(nymphes.Channel, 50, 120, 1500)
-		ns.Note(nymphes.Channel, 60, 120, 1500)
-		ns.Note(nymphes.Channel, 70, 120, 1500)
-		ns.Note(nymphes.Channel, 75, 120, 1500)
+	var poly pattern.Poly
 
-		fmt.Println(i)
+	notes1 := []pattern.Note{
+		{Note: 50, Duration: 500, Velocity: 100},
+		{Note: 50 + models.Note(pattern.Major3rd), Duration: 500, Velocity: 100},
+		{Note: 50 + models.Note(pattern.Perfect5th), Duration: 500, Velocity: 100},
+		{Note: 50 + models.Note(pattern.Major7th), Duration: 500, Velocity: 100},
 	}
+
+	pat1 := pattern.Pattern{
+		Midicom: ns,
+		Notes:   notes1,
+		Channel: nymphes.Channel,
+		Meta: pattern.Meta{
+			Synth: nymphes.Nymphes,
+			Part:  "voice1-start",
+		},
+	}
+
+	pat2 := pat1.Shift(pattern.Perfect5th)
+
+	poly.AddPattern(0, pat1)
+	poly.AddPattern(1, pat2)
+
+	err = pattern.Play(poly)
 }
