@@ -32,12 +32,12 @@ const (
 	T6
 )
 
-// Notes are all notes reproducible by the machines.
-type Notes int8
+// Note are all notes reproducible by the machines.
+type Note int8
 
 // Keys/letter notes
 const (
-	A0 Notes = iota + 21
+	A0 Note = iota + 21
 	As0
 	B0
 	C1
@@ -137,47 +137,47 @@ const (
 	As8
 	B8
 
-	Bf0 Notes = As0
-	Df1 Notes = Cs1
-	Ef1 Notes = Ds1
-	Gf1 Notes = Fs1
-	Af1 Notes = Gs1
-	Bf1 Notes = As1
-	Df2 Notes = Cs2
-	Ef2 Notes = Ds2
-	Gf2 Notes = Fs2
-	Af2 Notes = Gs2
-	Bf2 Notes = As2
-	Df3 Notes = Cs3
-	Ef3 Notes = Ds3
-	Gf3 Notes = Fs3
-	Af3 Notes = Gs3
-	Bf3 Notes = As3
-	Df4 Notes = Cs4
-	Ef4 Notes = Ds4
-	Gf4 Notes = Fs4
-	Af4 Notes = Gs4
-	Bf4 Notes = As4
-	Df5 Notes = Cs5
-	Ef5 Notes = Ds5
-	Gf5 Notes = Fs5
-	Af5 Notes = Gs5
-	Bf5 Notes = As5
-	Df6 Notes = Cs6
-	Ef6 Notes = Ds6
-	Gf6 Notes = Fs6
-	Af6 Notes = Gs6
-	Bf6 Notes = As6
-	Df7 Notes = Cs7
-	Ef7 Notes = Ds7
-	Gf7 Notes = Fs7
-	Af7 Notes = Gs7
-	Bf7 Notes = As7
-	Df8 Notes = Cs8
-	Ef8 Notes = Ds8
-	Gf8 Notes = Fs8
-	Af8 Notes = Gs8
-	Bf8 Notes = As8
+	Bf0 Note = As0
+	Df1 Note = Cs1
+	Ef1 Note = Ds1
+	Gf1 Note = Fs1
+	Af1 Note = Gs1
+	Bf1 Note = As1
+	Df2 Note = Cs2
+	Ef2 Note = Ds2
+	Gf2 Note = Fs2
+	Af2 Note = Gs2
+	Bf2 Note = As2
+	Df3 Note = Cs3
+	Ef3 Note = Ds3
+	Gf3 Note = Fs3
+	Af3 Note = Gs3
+	Bf3 Note = As3
+	Df4 Note = Cs4
+	Ef4 Note = Ds4
+	Gf4 Note = Fs4
+	Af4 Note = Gs4
+	Bf4 Note = As4
+	Df5 Note = Cs5
+	Ef5 Note = Ds5
+	Gf5 Note = Fs5
+	Af5 Note = Gs5
+	Bf5 Note = As5
+	Df6 Note = Cs6
+	Ef6 Note = Ds6
+	Gf6 Note = Fs6
+	Af6 Note = Gs6
+	Bf6 Note = As6
+	Df7 Note = Cs7
+	Ef7 Note = Ds7
+	Gf7 Note = Fs7
+	Af7 Note = Gs7
+	Bf7 Note = As7
+	Df8 Note = Cs8
+	Ef8 Note = Ds8
+	Gf8 Note = Fs8
+	Af8 Note = Gs8
+	Bf8 Note = As8
 )
 
 // Chords are all chords supported by the machines mapped custom type.
@@ -297,7 +297,7 @@ var ErrNotImplemented = fmt.Errorf("not implemented")
 
 type MidiCom interface {
 	Preset(channel Channel, preset Preset) error
-	Note(channel Channel, note Notes, velocity int8, duration float64) error
+	Note(channel Channel, note Note, velocity int8, duration float64) error
 	CC(channel Channel, parameter Parameter, value int8) error
 	PC(channel Channel, pc int8) error
 	Incoming() chan []byte
@@ -390,7 +390,7 @@ func (p *Project) Preset(track Channel, preset Preset) error {
 	return nil
 }
 
-func (p *Project) Note(track Channel, note Notes, velocity int8, duration float64) error {
+func (p *Project) Note(track Channel, note Note, velocity int8, duration float64) error {
 	p.wr.SetChannel(uint8(track))
 	err := writer.NoteOn(p.wr, uint8(note), uint8(velocity))
 	if err != nil {

@@ -90,7 +90,7 @@ func (p *Project) Preset(track models.Channel, preset models.Preset) error {
 	return models.ErrNotImplemented
 }
 
-func (p *Project) Note(track models.Channel, note models.Notes, velocity int8, duration float64) error {
+func (p *Project) Note(track models.Channel, note models.Note, velocity int8, duration float64) error {
 	return models.ErrNotImplemented
 }
 
