@@ -1,4 +1,4 @@
-package models
+package cycles
 
 import (
 	"fmt"
@@ -6,21 +6,21 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bh90210/models/midicom"
 	"gitlab.com/gomidi/midi"
 	"gitlab.com/gomidi/midi/writer"
 	driver "gitlab.com/gomidi/rtmididrv"
 )
 
-type model string
+type Model string
 
-// Model
 const (
-	CYCLES  model = "Model:Cycles"
-	SAMPLES model = "Model:Samples"
+	CYCLES  Model = "Model:Cycles"
+	SAMPLES Model = "Model:Samples"
 )
 
 // Channel represents a physical midi channel.
-type Channel int8
+type Channel midicom.Channel
 
 // Voices/Tracks
 const (
@@ -33,7 +33,7 @@ const (
 )
 
 // Note are all notes reproducible by the machines.
-type Note int8
+type Note midicom.Note
 
 // Keys/letter notes
 const (
@@ -227,7 +227,7 @@ const (
 
 // Parameter is all track parameters of the physical machine.
 // Sample has certain different key/values than Cycles.
-type Parameter int8
+type Parameter midicom.Parameter
 
 const (
 	NOTE       Parameter = 3
@@ -293,21 +293,10 @@ const (
 	CHORD
 )
 
-var ErrNotImplemented = fmt.Errorf("not implemented")
+var _ midicom.MidiCom = (*Project)(nil)
 
-type MidiCom interface {
-	Note(channel Channel, note Note, velocity int8, duration float64) error
-	CC(channel Channel, parameter Parameter, value int8) error
-	PC(channel Channel, pc int8) error
-	Incoming() chan []byte
-	Close()
-}
-
-var _ MidiCom = (*Project)(nil)
-
-// Project long description of the data structure, methods, behaviors and useage.
 type Project struct {
-	model
+	Model
 
 	mu *sync.Mutex
 	// midi fields
@@ -318,15 +307,14 @@ type Project struct {
 	listener chan []byte
 }
 
-// NewProject initiates and returns a *Project struct.
-func NewProject(m model) (*Project, error) {
+func NewProject(m Model) (*Project, error) {
 	drv, err := driver.New()
 	if err != nil {
 		return nil, err
 	}
 
 	p := &Project{
-		model: m,
+		Model: m,
 		mu:    new(sync.Mutex),
 		drv:   drv,
 	}
@@ -377,7 +365,7 @@ func NewProject(m model) (*Project, error) {
 	return p, nil
 }
 
-func (p *Project) Note(track Channel, note Note, velocity int8, duration float64) error {
+func (p *Project) Note(track midicom.Channel, note midicom.Note, velocity int8, duration float64) error {
 	p.wr.SetChannel(uint8(track))
 	err := writer.NoteOn(p.wr, uint8(note), uint8(velocity))
 	if err != nil {
@@ -397,12 +385,12 @@ func (p *Project) Note(track Channel, note Note, velocity int8, duration float64
 	return nil
 }
 
-func (p *Project) CC(track Channel, parameter Parameter, value int8) error {
+func (p *Project) CC(track midicom.Channel, parameter midicom.Parameter, value int8) error {
 	p.wr.SetChannel(uint8(track))
 	return writer.ControlChange(p.wr, uint8(parameter), uint8(value))
 }
 
-func (p *Project) PC(track Channel, pc int8) error {
+func (p *Project) PC(track midicom.Channel, pc int8) error {
 	p.wr.SetChannel(uint8(track))
 	return writer.ProgramChange(p.wr, uint8(pc))
 }

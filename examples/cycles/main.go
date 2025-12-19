@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	m "github.com/bh90210/models"
+	m "github.com/bh90210/models/cycles"
 )
 
 func main() {

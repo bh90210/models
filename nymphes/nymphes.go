@@ -6,18 +6,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bh90210/models"
+	"github.com/bh90210/models/midicom"
 	"gitlab.com/gomidi/midi"
 	"gitlab.com/gomidi/midi/writer"
 	driver "gitlab.com/gomidi/rtmididrv"
 )
 
 const (
-	Nymphes string         = "Nymphes"
-	Channel models.Channel = 0
+	Nymphes string          = "Nymphes"
+	Channel midicom.Channel = 0
 )
 
-var _ models.MidiCom = (*Project)(nil)
+var _ midicom.MidiCom = (*Project)(nil)
 
 type Project struct {
 	mu *sync.Mutex
@@ -93,7 +93,7 @@ func NewProject() (*Project, error) {
 	return p, nil
 }
 
-func (p *Project) Note(_ models.Channel, note models.Note, velocity int8, duration float64) error {
+func (p *Project) Note(_ midicom.Channel, note midicom.Note, velocity int8, duration float64) error {
 	err := writer.NoteOn(p.wr, uint8(note), uint8(velocity))
 	if err != nil {
 		fmt.Println("Error sending NoteOn:", err)
@@ -111,11 +111,11 @@ func (p *Project) Note(_ models.Channel, note models.Note, velocity int8, durati
 	return nil
 }
 
-func (p *Project) CC(_ models.Channel, parameter models.Parameter, value int8) error {
+func (p *Project) CC(_ midicom.Channel, parameter midicom.Parameter, value int8) error {
 	return writer.ControlChange(p.wr, uint8(parameter), uint8(value))
 }
 
-func (p *Project) PC(_ models.Channel, pc int8) error {
+func (p *Project) PC(_ midicom.Channel, pc int8) error {
 	return writer.ProgramChange(p.wr, uint8(pc))
 }
 

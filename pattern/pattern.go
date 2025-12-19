@@ -1,10 +1,12 @@
+// Package pattern provides structures and functions to create and manipulate musical patterns.
+// It is based on the models.MidiCom interface defined in the models package,
 package pattern
 
 import (
 	"fmt"
 	"sync"
 
-	"github.com/bh90210/models"
+	"github.com/bh90210/models/midicom"
 )
 
 // Degree represents a musical interval in terms of semitones.
@@ -44,19 +46,19 @@ const (
 // In the case of Model Cycles the is no polymphony so we need to stack the patterns
 // against the different channels of the synth (6 channels.)
 type Pattern struct {
-	Midicom models.MidiCom
+	Midicom midicom.MidiCom
 	Notes   []Note
-	Channel models.Channel
+	Channel midicom.Channel
 
 	Meta
 }
 
 type Note struct {
-	Note     models.Note
+	Note     midicom.Note
 	Duration float64 // In milliseconds.
 	Velocity int8
-	CC       map[models.Parameter]int8 // CC changes to apply when playing this note.
-	PC       *int8                     // Program Change to apply when playing this note.
+	CC       map[midicom.Parameter]int8 // CC changes to apply when playing this note.
+	PC       *int8                      // Program Change to apply when playing this note.
 }
 
 type Meta struct {
@@ -64,11 +66,14 @@ type Meta struct {
 	Part  string
 }
 
+// Shift shifts all notes in the pattern by the given degree
+// and returns a new Pattern with the shifted notes.
+// It does not modify the original pattern.
 func (p *Pattern) Shift(shift Degree) Pattern {
 	var shiftedNotes []Note
 	for _, note := range p.Notes {
 		shiftedNotes = append(shiftedNotes, Note{
-			Note:     models.Note(int8(note.Note) + int8(shift)),
+			Note:     midicom.Note(int8(note.Note) + int8(shift)),
 			Duration: note.Duration,
 			Velocity: note.Velocity,
 		})
@@ -101,23 +106,28 @@ func (p *Poly) GetPatterns() map[int][]Pattern {
 	return p.patterns
 }
 
+func (p *Poly) Print() error {
+	return nil
+}
+
 func Play(patterns Poly) error {
 	// Get all voices and their patterns.
 	allVoices := patterns.GetPatterns()
 	// Find how many voices we have.
 	length := len(allVoices)
 
-	wg := sync.WaitGroup{}
 	// Play all voices in parallel.
+	var wg sync.WaitGroup
+	wg.Add(length)
 	for voice := range length {
-		wg.Add(1)
-
 		// Read each voice's patterns concurrently.
 		go func(voice []Pattern) {
+			defer wg.Done()
+
+			// Read each voice's patterns serially.
 			for _, pat := range voice {
 				if pat.Midicom == nil {
 					fmt.Println("No MidiCom assigned to pattern", pat.Meta)
-					wg.Done()
 					return
 				}
 
@@ -133,7 +143,7 @@ func Play(patterns Poly) error {
 
 					if n.CC != nil {
 						for cc, val := range n.CC {
-							err := pat.Midicom.CC(pat.Channel, models.Parameter(cc), val)
+							err := pat.Midicom.CC(pat.Channel, cc, val)
 							if err != nil {
 								fmt.Println("Error sending CC:", err)
 								return
@@ -149,8 +159,6 @@ func Play(patterns Poly) error {
 					}
 				}
 			}
-
-			wg.Done()
 		}(allVoices[voice])
 	}
 
