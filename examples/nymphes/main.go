@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bh90210/models"
+	"github.com/bh90210/models/midicom"
 	"github.com/bh90210/models/nymphes"
 	"github.com/bh90210/models/pattern"
 )
@@ -29,9 +29,9 @@ func main() {
 
 	notes1 := []pattern.Note{
 		{Note: 50, Duration: 500, Velocity: 100},
-		{Note: 50 + models.Note(pattern.Major3rd), Duration: 500, Velocity: 100},
-		{Note: 50 + models.Note(pattern.Perfect5th), Duration: 500, Velocity: 100},
-		{Note: 50 + models.Note(pattern.Major7th), Duration: 500, Velocity: 100},
+		{Note: 50 + midicom.Note(pattern.Major3rd), Duration: 500, Velocity: 100},
+		{Note: 50 + midicom.Note(pattern.Perfect5th), Duration: 500, Velocity: 100},
+		{Note: 50 + midicom.Note(pattern.Major7th), Duration: 500, Velocity: 100},
 	}
 
 	pat1 := pattern.Pattern{

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/bh90210/models"
+	"github.com/bh90210/models/midicom"
 	"gitlab.com/gomidi/midi"
 	"gitlab.com/gomidi/midi/writer"
 	driver "gitlab.com/gomidi/rtmididrv"
@@ -27,7 +27,7 @@ var Drums = map[uint8]string{
 	21: "HH Foot",
 }
 
-var _ models.MidiCom = (*Project)(nil)
+var _ midicom.MidiCom = (*Project)(nil)
 
 type Project struct {
 	mu *sync.Mutex
@@ -86,20 +86,16 @@ func NewProject() (*Project, error) {
 	return p, nil
 }
 
-func (p *Project) Preset(track models.Channel, preset models.Preset) error {
-	return models.ErrNotImplemented
+func (p *Project) Note(track midicom.Channel, note midicom.Note, velocity int8, duration float64) error {
+	return midicom.ErrNotImplemented
 }
 
-func (p *Project) Note(track models.Channel, note models.Note, velocity int8, duration float64) error {
-	return models.ErrNotImplemented
+func (p *Project) CC(track midicom.Channel, parameter midicom.Parameter, value int8) error {
+	return midicom.ErrNotImplemented
 }
 
-func (p *Project) CC(track models.Channel, parameter models.Parameter, value int8) error {
-	return models.ErrNotImplemented
-}
-
-func (p *Project) PC(t models.Channel, pc int8) error {
-	return models.ErrNotImplemented
+func (p *Project) PC(t midicom.Channel, pc int8) error {
+	return midicom.ErrNotImplemented
 }
 
 func (p *Project) Incoming() chan []byte {
