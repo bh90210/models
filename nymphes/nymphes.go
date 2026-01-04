@@ -94,6 +94,13 @@ func NewProject() (*Project, error) {
 }
 
 func (p *Project) Note(_ midicom.Channel, note midicom.Note, velocity int8, duration float64) error {
+	// If velocity is 0, we just wait for the duration (rest)
+	// but do not send any note on/off messages.
+	if velocity == 0 {
+		time.Sleep(time.Millisecond * time.Duration(duration))
+		return nil
+	}
+
 	err := writer.NoteOn(p.wr, uint8(note), uint8(velocity))
 	if err != nil {
 		fmt.Println("Error sending NoteOn:", err)
