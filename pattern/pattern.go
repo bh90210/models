@@ -1,5 +1,5 @@
 // Package pattern provides structures and functions to create and manipulate musical patterns.
-// It is based on the models.MidiCom interface defined in the models package,
+// It is based on the midicom.MidiCom interface defined in the midicom package.
 package pattern
 
 import (
@@ -7,6 +7,9 @@ import (
 	"sync"
 
 	"github.com/bh90210/models/midicom"
+
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 )
 
 // Degree represents a musical interval in terms of semitones.
@@ -39,20 +42,6 @@ const (
 	Octave
 )
 
-// Note to self: the way we achive polypoly is by stacking multple patterns.
-// For example, on Nymphes we would play in parallel 3 patterns, each assigned to
-// channel 0 (since Nymphes only has one channel). Each pattern would have its own
-// set of notes, durations, and velocities, togeteher forming a chord.
-// In the case of Model Cycles the is no polymphony so we need to stack the patterns
-// against the different channels of the synth (6 channels.)
-type Pattern struct {
-	Midicom midicom.MidiCom
-	Notes   []Note
-	Channel midicom.Channel
-
-	Meta
-}
-
 type Note struct {
 	Note     midicom.Note
 	Duration float64 // In milliseconds.
@@ -64,6 +53,19 @@ type Note struct {
 type Meta struct {
 	Synth string
 	Part  string
+}
+
+// Note to self: the way we achive polypoly is by stacking multple patterns.
+// For example, on Nymphes we would play in parallel 3 patterns, each assigned to
+// channel 0 (since Nymphes only has one channel). Each pattern would have its own
+// set of notes, durations, and velocities, togeteher forming a chord.
+// In the case of Model Cycles the is no polymphony so we need to stack the patterns
+// against the different channels of the synth (6 channels.)
+type Pattern struct {
+	Midicom midicom.MidiCom
+	Channel midicom.Channel
+	Notes   []Note
+	Meta
 }
 
 // Shift shifts all notes in the pattern by the given degree
@@ -90,29 +92,278 @@ func (p *Pattern) Shift(shift Degree) Pattern {
 	}
 }
 
-type Poly struct {
-	// patterns hols the polyphonic patterns to be played.
-	// The key of the map is the voice. Note that this is
-	// independent of the channel, as multiple voices can
-	// share the same channel, for example Nymphes.
-	patterns map[int][]Pattern
+func (p *Pattern) Print() {
+	t := table.NewWriter()
+
+	t.SetStyle(table.StyleRounded)
+	t.SetColumnConfigs([]table.ColumnConfig{
+		{Name: "Synth", WidthMax: 10},
+		{Name: "Part", WidthMax: 10},
+		{Name: "Notes", WidthMax: 30},
+		{Name: "Durations", WidthMax: 30},
+		{Name: "Velocities", WidthMax: 30},
+	})
+
+	t.AppendHeader(table.Row{"Synth", "Part", "Channel", "Notes", "Durations", "Velocities"})
+
+	var notes []midicom.Note
+	var durations []float64
+	var velocities []int8
+
+	for _, n := range p.Notes {
+		notes = append(notes, n.Note)
+		durations = append(durations, n.Duration)
+		velocities = append(velocities, n.Velocity)
+	}
+
+	t.AppendRow(table.Row{
+		p.Meta.Synth,
+		p.Meta.Part,
+		p.Channel,
+		notes,
+		durations,
+		velocities,
+	})
+
+	fmt.Println(t.Render())
 }
 
-func (p *Poly) AddPattern(voice int, pattern Pattern) {
-	p.patterns[voice] = append(p.patterns[voice], pattern)
+type Print struct {
+	allVoices map[int][]Pattern
+	voices    int
+	// t is the table writer.
+	t table.Writer
 }
 
-func (p *Poly) GetPatterns() map[int][]Pattern {
-	return p.patterns
+func NewPrint(allVoices map[int][]Pattern) *Print {
+	p := &Print{
+		allVoices: allVoices,
+	}
+
+	// Find how many voices we have.
+	p.voices = len(p.allVoices)
+
+	p.t = table.NewWriter()
+
+	p.t.SetStyle(table.StyleRounded)
+	p.t.SetColumnConfigs([]table.ColumnConfig{
+		{Name: "Synth", WidthMax: 10},
+		{Name: "Part", WidthMax: 10},
+		{Name: "Notes", WidthMax: 30},
+		{Name: "Durations", WidthMax: 30},
+		{Name: "Velocities", WidthMax: 30},
+	})
+
+	p.t.AppendHeader(table.Row{"Synth", "Part", "Voice", "Position", "Channel", "Notes", "Durations", "Velocities"})
+
+	return p
 }
 
-func (p *Poly) Print() error {
-	return nil
+type Sorter int
+
+const (
+	Voice Sorter = iota
+	PatternPosition
+)
+
+func (p *Print) Print(sorter Sorter) {
+	defer p.t.ResetRows()
+	defer p.t.ResetFooters()
+
+	switch sorter {
+	case Voice:
+		p.voiceSorter()
+	case PatternPosition:
+		p.patternPositionSorter()
+	}
+
+	fmt.Println(p.t.Render())
 }
 
-func Play(patterns Poly) error {
-	// Get all voices and their patterns.
-	allVoices := patterns.GetPatterns()
+func (p *Print) voiceSorter() {
+	var rows []table.Row
+
+	for voice, patterns := range p.allVoices {
+		for patternPosition, pat := range patterns {
+			var notes []midicom.Note
+			var durations []float64
+			var velocities []int8
+
+			for _, n := range pat.Notes {
+				notes = append(notes, n.Note)
+				durations = append(durations, n.Duration)
+				velocities = append(velocities, n.Velocity)
+			}
+
+			switch voice % 5 {
+			case 0:
+				rows = append(rows, table.Row{
+					text.FgHiRed.Sprint(pat.Meta.Synth),
+					text.FgHiRed.Sprint(pat.Meta.Part),
+					text.FgHiRed.Sprint(voice),
+					text.FgHiRed.Sprint(patternPosition),
+					text.FgHiRed.Sprint(pat.Channel),
+					text.FgHiRed.Sprint(notes),
+					text.FgHiRed.Sprint(durations),
+					text.FgHiRed.Sprint(velocities),
+				})
+			case 1:
+				rows = append(rows, table.Row{
+					text.FgHiGreen.Sprint(pat.Meta.Synth),
+					text.FgHiGreen.Sprint(pat.Meta.Part),
+					text.FgHiGreen.Sprint(voice),
+					text.FgHiGreen.Sprint(patternPosition),
+					text.FgHiGreen.Sprint(pat.Channel),
+					text.FgHiGreen.Sprint(notes),
+					text.FgHiGreen.Sprint(durations),
+					text.FgHiGreen.Sprint(velocities),
+				})
+			case 2:
+				rows = append(rows, table.Row{
+					text.FgHiBlue.Sprint(pat.Meta.Synth),
+					text.FgHiBlue.Sprint(pat.Meta.Part),
+					text.FgHiBlue.Sprint(voice),
+					text.FgHiBlue.Sprint(patternPosition),
+					text.FgHiBlue.Sprint(pat.Channel),
+					text.FgHiBlue.Sprint(notes),
+					text.FgHiBlue.Sprint(durations),
+					text.FgHiBlue.Sprint(velocities),
+				})
+			case 3:
+				rows = append(rows, table.Row{
+					text.FgHiCyan.Sprint(pat.Meta.Synth),
+					text.FgHiCyan.Sprint(pat.Meta.Part),
+					text.FgHiCyan.Sprint(voice),
+					text.FgHiCyan.Sprint(patternPosition),
+					text.FgHiCyan.Sprint(pat.Channel),
+					text.FgHiCyan.Sprint(notes),
+					text.FgHiCyan.Sprint(durations),
+					text.FgHiCyan.Sprint(velocities),
+				})
+			case 4:
+				rows = append(rows, table.Row{
+					text.FgHiMagenta.Sprint(pat.Meta.Synth),
+					text.FgHiMagenta.Sprint(pat.Meta.Part),
+					text.FgHiMagenta.Sprint(voice),
+					text.FgHiMagenta.Sprint(patternPosition),
+					text.FgHiMagenta.Sprint(pat.Channel),
+					text.FgHiMagenta.Sprint(notes),
+					text.FgHiMagenta.Sprint(durations),
+					text.FgHiMagenta.Sprint(velocities),
+				})
+			}
+		}
+	}
+
+	for _, v := range rows {
+		p.t.AppendRow(v)
+	}
+
+	p.t.AppendSeparator()
+
+	p.t.AppendFooter(table.Row{"voice sorter"})
+}
+
+func (p *Print) patternPositionSorter() {
+	patternsSort := make(map[int][]Pattern)
+
+	for _, patterns := range p.allVoices {
+		for patternPosition, pat := range patterns {
+			patternsSort[patternPosition] = append(patternsSort[patternPosition], pat)
+		}
+	}
+
+	var rows []table.Row
+	patternsLength := len(patternsSort)
+	for patternPosition := 0; patternPosition < patternsLength; patternPosition++ {
+		patterns := patternsSort[patternPosition]
+		for voice, pat := range patterns {
+			var notes []midicom.Note
+			var durations []float64
+			var velocities []int8
+
+			for _, n := range pat.Notes {
+				notes = append(notes, n.Note)
+				durations = append(durations, n.Duration)
+				velocities = append(velocities, n.Velocity)
+			}
+
+			switch patternPosition % 5 {
+			case 0:
+				rows = append(rows, table.Row{
+					text.FgHiRed.Sprint(pat.Meta.Synth),
+					text.FgHiRed.Sprint(pat.Meta.Part),
+					text.FgHiRed.Sprint(voice),
+					text.FgHiRed.Sprint(patternPosition),
+					text.FgHiRed.Sprint(pat.Channel),
+					text.FgHiRed.Sprint(notes),
+					text.FgHiRed.Sprint(durations),
+					text.FgHiRed.Sprint(velocities),
+				})
+			case 1:
+				rows = append(rows, table.Row{
+					text.FgHiGreen.Sprint(pat.Meta.Synth),
+					text.FgHiGreen.Sprint(pat.Meta.Part),
+					text.FgHiGreen.Sprint(voice),
+					text.FgHiGreen.Sprint(patternPosition),
+					text.FgHiGreen.Sprint(pat.Channel),
+					text.FgHiGreen.Sprint(notes),
+					text.FgHiGreen.Sprint(durations),
+					text.FgHiGreen.Sprint(velocities),
+				})
+			case 2:
+				rows = append(rows, table.Row{
+					text.FgHiBlue.Sprint(pat.Meta.Synth),
+					text.FgHiBlue.Sprint(pat.Meta.Part),
+					text.FgHiBlue.Sprint(voice),
+					text.FgHiBlue.Sprint(patternPosition),
+					text.FgHiBlue.Sprint(pat.Channel),
+					text.FgHiBlue.Sprint(notes),
+					text.FgHiBlue.Sprint(durations),
+					text.FgHiBlue.Sprint(velocities),
+				})
+			case 3:
+				rows = append(rows, table.Row{
+					text.FgHiCyan.Sprint(pat.Meta.Synth),
+					text.FgHiCyan.Sprint(pat.Meta.Part),
+					text.FgHiCyan.Sprint(voice),
+					text.FgHiCyan.Sprint(patternPosition),
+					text.FgHiCyan.Sprint(pat.Channel),
+					text.FgHiCyan.Sprint(notes),
+					text.FgHiCyan.Sprint(durations),
+					text.FgHiCyan.Sprint(velocities),
+				})
+			case 4:
+				rows = append(rows, table.Row{
+					text.FgHiMagenta.Sprint(pat.Meta.Synth),
+					text.FgHiMagenta.Sprint(pat.Meta.Part),
+					text.FgHiMagenta.Sprint(voice),
+					text.FgHiMagenta.Sprint(patternPosition),
+					text.FgHiMagenta.Sprint(pat.Channel),
+					text.FgHiMagenta.Sprint(notes),
+					text.FgHiMagenta.Sprint(durations),
+					text.FgHiMagenta.Sprint(velocities),
+				})
+			}
+		}
+	}
+
+	for _, v := range rows {
+		p.t.AppendRow(v)
+	}
+
+	p.t.AppendSeparator()
+
+	p.t.AppendFooter(table.Row{"pattern sorter"})
+}
+
+// Play
+//
+// allVoices argument holds the polyphonic patterns to be played.
+// The key of the map is the voice. Note that this is
+// independent of the channel, as multiple voices can
+// share the same channel, for example Nymphes.
+func Play(allVoices map[int][]Pattern) error {
 	// Find how many voices we have.
 	length := len(allVoices)
 
@@ -121,20 +372,24 @@ func Play(patterns Poly) error {
 	wg.Add(length)
 	for voice := range length {
 		// Read each voice's patterns concurrently.
-		go func(voice []Pattern) {
+		go func(patterns []Pattern) {
 			defer wg.Done()
 
 			// Read each voice's patterns serially.
-			for _, pat := range voice {
-				if pat.Midicom == nil {
-					fmt.Println("No MidiCom assigned to pattern", pat.Meta)
+			for _, p := range patterns {
+				if p.Midicom == nil {
+					fmt.Println("No MidiCom assigned to pattern", p.Meta)
 					return
 				}
 
-				for _, n := range pat.Notes {
+				// TODO: prolly remove as showing the meta while playing in concurent
+				// fashion will rather be chaotic, but try it first.
+				// p.Print(voice, i)
+
+				for _, n := range p.Notes {
 					// First apply any PC or CC changes.
 					if n.PC != nil {
-						err := pat.Midicom.PC(pat.Channel, *n.PC)
+						err := p.Midicom.PC(p.Channel, *n.PC)
 						if err != nil {
 							fmt.Println("Error sending PC:", err)
 							return
@@ -143,7 +398,7 @@ func Play(patterns Poly) error {
 
 					if n.CC != nil {
 						for cc, val := range n.CC {
-							err := pat.Midicom.CC(pat.Channel, cc, val)
+							err := p.Midicom.CC(p.Channel, cc, val)
 							if err != nil {
 								fmt.Println("Error sending CC:", err)
 								return
@@ -152,7 +407,7 @@ func Play(patterns Poly) error {
 					}
 
 					// Now play the note.
-					err := pat.Midicom.Note(pat.Channel, n.Note, n.Velocity, n.Duration)
+					err := p.Midicom.Note(p.Channel, n.Note, n.Velocity, n.Duration)
 					if err != nil {
 						fmt.Println("Error playing note:", err)
 						return

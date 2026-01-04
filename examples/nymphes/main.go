@@ -21,8 +21,6 @@ func main() {
 		}
 	}()
 
-	var poly pattern.Poly
-
 	// Generate the notes (melody.)
 
 	// Generate the duration + velocity (rhythm.) for each note.
@@ -46,8 +44,16 @@ func main() {
 
 	pat2 := pat1.Shift(pattern.Perfect5th)
 
-	poly.AddPattern(0, pat1)
-	poly.AddPattern(1, pat2)
+	allVoices := make(map[int][]pattern.Pattern)
 
-	err = pattern.Play(poly)
+	allVoices[0] = []pattern.Pattern{pat1}
+	allVoices[1] = []pattern.Pattern{pat2}
+
+	p := pattern.NewPrint(allVoices)
+	p.Print(pattern.Voice)
+
+	err = pattern.Play(allVoices)
+	if err != nil {
+		panic(err)
+	}
 }

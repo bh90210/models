@@ -14,17 +14,17 @@ import (
 
 const Turbo string = "Alesis Turbo"
 
-var Drums = map[uint8]string{
-	38: "Snare",
-	48: "Tom1",
-	45: "Tom2",
-	43: "Tom3",
-	4:  "HiHat Closed",
-	46: "HH",
-	49: "Crash",
-	51: "Ride",
-	36: "Kick",
-	21: "HH Foot",
+var Drums = map[string]uint8{
+	"Snare":       38,
+	"Tom1":        48,
+	"Tom2":        45,
+	"Tom3":        43,
+	"HiHatClosed": 4,
+	"HiHatOpen":   46,
+	"Crash":       49,
+	"Ride":        51,
+	"Kick":        36,
+	"HiHatFoot":   21,
 }
 
 var _ midicom.MidiCom = (*Project)(nil)
@@ -75,11 +75,9 @@ func NewProject() (*Project, error) {
 			return
 		}
 
-		select {
-		case p.listener <- d:
-		default:
-			fmt.Println("no turbo receiver", d)
-		}
+		fmt.Println(d)
+
+		p.listener <- d
 	})
 	p.mu.Unlock()
 
