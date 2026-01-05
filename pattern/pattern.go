@@ -261,7 +261,7 @@ func (p *Print) voiceSorter() {
 
 	p.t.AppendSeparator()
 
-	p.t.AppendFooter(table.Row{"voice sorter"})
+	p.t.AppendFooter(table.Row{"voice", "sorter"})
 }
 
 func (p *Print) patternPositionSorter() {
@@ -275,7 +275,7 @@ func (p *Print) patternPositionSorter() {
 
 	var rows []table.Row
 	patternsLength := len(patternsSort)
-	for patternPosition := 0; patternPosition < patternsLength; patternPosition++ {
+	for patternPosition := range patternsLength {
 		patterns := patternsSort[patternPosition]
 		for voice, pat := range patterns {
 			var notes []midicom.Note
@@ -354,7 +354,7 @@ func (p *Print) patternPositionSorter() {
 
 	p.t.AppendSeparator()
 
-	p.t.AppendFooter(table.Row{"pattern sorter"})
+	p.t.AppendFooter(table.Row{"pattern", "sorter"})
 }
 
 // Play

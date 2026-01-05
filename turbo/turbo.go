@@ -1,3 +1,5 @@
+// Package turbo implements the midicom.MidiCom interface for the
+// Alesis Turbo drum module.
 package turbo
 
 import (

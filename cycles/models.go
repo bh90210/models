@@ -1,3 +1,5 @@
+// Package cycles implements the midicom.MidiCom interface for the
+// Elektron Cycles and Samples drum machines.
 package cycles
 
 import (

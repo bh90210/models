@@ -1,3 +1,5 @@
+// Package midicom defines the interface for MIDI communication with
+// various MIDI-capable devices.
 package midicom
 
 import "fmt"

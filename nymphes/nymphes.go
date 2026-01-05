@@ -1,3 +1,5 @@
+// Package nymphes implements the midicom.MidiCom interface for the
+// Dreadbox Nymphes synthesizer.
 package nymphes
 
 import (
