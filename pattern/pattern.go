@@ -81,14 +81,14 @@ func (p *Pattern) Shift(shift Degree) Pattern {
 		})
 	}
 
-	// Add shift info to meta.
-	p.Meta.Part = fmt.Sprintf("%s_shifted_%d", p.Meta.Part, shift)
-
 	return Pattern{
 		Midicom: p.Midicom,
 		Notes:   shiftedNotes,
 		Channel: p.Channel,
-		Meta:    p.Meta,
+		Meta: Meta{
+			Synth: p.Meta.Synth,
+			Part:  fmt.Sprintf("%s_shifted_%d", p.Meta.Part, shift),
+		},
 	}
 }
 
@@ -97,8 +97,8 @@ func (p *Pattern) Print() {
 
 	t.SetStyle(table.StyleRounded)
 	t.SetColumnConfigs([]table.ColumnConfig{
-		{Name: "Synth", WidthMax: 10},
-		{Name: "Part", WidthMax: 10},
+		{Name: "Synth", WidthMax: 30},
+		{Name: "Part", WidthMax: 30},
 		{Name: "Notes", WidthMax: 30},
 		{Name: "Durations", WidthMax: 30},
 		{Name: "Velocities", WidthMax: 30},
@@ -147,8 +147,8 @@ func NewPrint(allVoices map[int][]Pattern) *Print {
 
 	p.t.SetStyle(table.StyleRounded)
 	p.t.SetColumnConfigs([]table.ColumnConfig{
-		{Name: "Synth", WidthMax: 10},
-		{Name: "Part", WidthMax: 10},
+		{Name: "Synth", WidthMax: 30},
+		{Name: "Part", WidthMax: 30},
 		{Name: "Notes", WidthMax: 30},
 		{Name: "Durations", WidthMax: 30},
 		{Name: "Velocities", WidthMax: 30},
