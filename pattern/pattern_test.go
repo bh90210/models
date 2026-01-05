@@ -126,7 +126,6 @@ func TestPatternPrint(t *testing.T) {
 func TestPrint(t *testing.T) {
 	tests := map[string]struct {
 		allVoices map[int][]Pattern
-		// print     Print
 	}{
 		"multiple voices": {
 			allVoices: map[int][]Pattern{
@@ -214,7 +213,6 @@ func TestPrint(t *testing.T) {
 					},
 				},
 			},
-			// print: Print{},
 		},
 	}
 
