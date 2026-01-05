@@ -230,40 +230,40 @@ const (
 type Parameter midicom.Parameter
 
 const (
-	NOTE       Parameter = 3
-	TRACKLEVEL Parameter = 17
-	MUTE       Parameter = 94
-	PAN        Parameter = 10
-	SWEEP      Parameter = 18
-	CONTOUR    Parameter = 19
-	DELAY      Parameter = 12
-	REVERB     Parameter = 13
-	VOLUMEDIST Parameter = 7
-	// SWING      Parameter = 15
-	// CHANCE     Parameter = 14
+	NOTE       midicom.Parameter = 3
+	TRACKLEVEL midicom.Parameter = 17
+	MUTE       midicom.Parameter = 94
+	PAN        midicom.Parameter = 10
+	SWEEP      midicom.Parameter = 18
+	CONTOUR    midicom.Parameter = 19
+	DELAY      midicom.Parameter = 12
+	REVERB     midicom.Parameter = 13
+	VOLUMEDIST midicom.Parameter = 7
+	// SWING      midicom.Parameter = 15
+	// CHANCE     midicom.Parameter = 14
 
 	// model:cycles
-	MACHINE     Parameter = 64
-	CYCLESPITCH Parameter = 65
-	DECAY       Parameter = 80
-	COLOR       Parameter = 16
-	SHAPE       Parameter = 17
-	PUNCH       Parameter = 66
-	GATE        Parameter = 67
+	MACHINE     midicom.Parameter = 64
+	CYCLESPITCH midicom.Parameter = 65
+	DECAY       midicom.Parameter = 80
+	COLOR       midicom.Parameter = 16
+	SHAPE       midicom.Parameter = 17
+	PUNCH       midicom.Parameter = 66
+	GATE        midicom.Parameter = 67
 
 	// model:samples
-	PITCH        Parameter = 16
-	SAMPLESTART  Parameter = 19
-	SAMPLELENGTH Parameter = 20
-	CUTOFF       Parameter = 74
-	RESONANCE    Parameter = 71
-	LOOP         Parameter = 17
-	REVERSE      Parameter = 18
+	PITCH        midicom.Parameter = 16
+	SAMPLESTART  midicom.Parameter = 19
+	SAMPLELENGTH midicom.Parameter = 20
+	CUTOFF       midicom.Parameter = 74
+	RESONANCE    midicom.Parameter = 71
+	LOOP         midicom.Parameter = 17
+	REVERSE      midicom.Parameter = 18
 )
 
 // Reverb & Delay settings
 const (
-	DELAYTIME Parameter = iota + 85
+	DELAYTIME midicom.Parameter = iota + 85
 	DELAYFEEDBACK
 	REVERBSIZE
 	REVERBTONE
@@ -271,7 +271,7 @@ const (
 
 // LFO settings
 const (
-	LFOSPEED Parameter = iota + 102
+	LFOSPEED midicom.Parameter = iota + 102
 	LFOMULTIPIER
 	LFOFADE
 	LFODEST
@@ -413,11 +413,11 @@ func (p *Project) Close() {
 }
 
 // Preset represents a machine's preset.
-type Preset map[Parameter]int8
+type Preset map[midicom.Parameter]int8
 
 // PT1 is the cycles preset for track 1.
 func PT1() Preset {
-	p := make(map[Parameter]int8)
+	p := make(map[midicom.Parameter]int8)
 	p[MACHINE] = int8(KICK)
 	p[TRACKLEVEL] = int8(120)
 	p[MUTE] = int8(0)
