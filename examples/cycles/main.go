@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
-	"time"
 
+	"github.com/bh90210/models/cycles"
 	m "github.com/bh90210/models/cycles"
+	"github.com/bh90210/models/midicom"
+	"github.com/bh90210/models/pattern"
 )
 
 func main() {
@@ -22,42 +24,120 @@ func main() {
 		}
 	}()
 
-	var noteLength int = 50
+	allVoices := make(map[int][]pattern.Pattern)
 
-	// defaultPresetT1 := m.PT1()
-	// p.Preset(m.T1, defaultPresetT1)
-	p.CC(0, 16, 100)
-	p.Note(0, 36, 120, float64(noteLength))
-	time.Sleep(time.Duration(100 * time.Millisecond))
-	p.CC(0, 16, 10)
-	p.Note(0, 36, 120, float64(noteLength))
-	// time.Sleep(time.Duration(1 * time.Second))
-	// p.Note(1, m.C4, 120, float64(noteLength))
-	// time.Sleep(time.Duration(1 * time.Second))
-	// p.Note(1, m.C4, 120, float64(noteLength))
-	// time.Sleep(time.Duration(1 * time.Second))
+	note := pattern.Note{Note: midicom.Note(cycles.C4), Duration: 200, Velocity: 100}
 
-	// p.Note(m.T2, m.C4, 120, float64(noteLength), m.PT2())
-	// time.Sleep(time.Duration(noteLength) * time.Millisecond)
+	// BD
+	pat := pattern.Pattern{
+		Midicom: p,
+		Notes:   []pattern.Note{note},
+		Channel: midicom.Channel(cycles.T1),
+		Meta: pattern.Meta{
+			Synth: string(cycles.CYCLES),
+			Part:  "BD",
+		},
+	}
 
-	// p.Preset(m.T3, m.PT3())
-	// p.CC(m.T3, m.DELAY, 0)
-	// p.Note(m.T3, m.C4, 120, float64(noteLength))
-	// time.Sleep(time.Duration(noteLength) * time.Millisecond)
+	pat.Notes[0].CC = cycles.PT1()
 
-	// preset4 := m.PT4()
-	// p.Preset(m.T4, preset4)
-	// preset4 = make(map[m.Parameter]int8)
-	// preset4[m.DELAY] = 0
-	// p.Preset(m.T4, preset4)
-	// p.Note(m.T4, m.C4, 120, float64(noteLength))
-	// time.Sleep(time.Duration(noteLength) * time.Millisecond)
+	allVoices[0] = append(allVoices[0], pat)
 
-	// p.Note(m.T5, m.C4, 120, float64(noteLength), m.PT5())
-	// time.Sleep(time.Duration(noteLength) * time.Millisecond)
+	// SN
+	pat = pattern.Pattern{
+		Midicom: p,
+		Notes:   []pattern.Note{note},
+		Channel: midicom.Channel(cycles.T2),
+		Meta: pattern.Meta{
+			Synth: pat.Synth,
+			Part:  "SN",
+		},
+	}
 
-	// chord := m.PT6()
-	// chord[m.SHAPE] = int8(m.MajorMinor9no5)
-	// p.Note(m.T6, m.C4, 120, float64(noteLength), chord)
-	// time.Sleep(time.Duration(noteLength) * time.Millisecond)
+	pat.Notes[0].CC = cycles.PT2()
+
+	allVoices[0] = append(allVoices[0], pat)
+
+	// Metal
+	pat = pattern.Pattern{
+		Midicom: p,
+		Notes:   []pattern.Note{note},
+		Channel: midicom.Channel(cycles.T3),
+		Meta: pattern.Meta{
+			Synth: pat.Synth,
+			Part:  "Metal",
+		},
+	}
+
+	pat.Notes[0].CC = cycles.PT3()
+
+	allVoices[0] = append(allVoices[0], pat)
+
+	// Perc
+	pat = pattern.Pattern{
+		Midicom: p,
+		Notes:   []pattern.Note{note},
+		Channel: midicom.Channel(cycles.T4),
+		Meta: pattern.Meta{
+			Synth: pat.Synth,
+			Part:  "Perc",
+		},
+	}
+
+	pat.Notes[0].CC = cycles.PT4()
+
+	allVoices[0] = append(allVoices[0], pat)
+
+	// Tone
+	pat = pattern.Pattern{
+		Midicom: p,
+		Notes:   []pattern.Note{note},
+		Channel: midicom.Channel(cycles.T5),
+		Meta: pattern.Meta{
+			Synth: pat.Synth,
+			Part:  "Tone",
+		},
+	}
+
+	pat.Notes[0].CC = cycles.PT5()
+
+	allVoices[0] = append(allVoices[0], pat)
+
+	// Chord
+	for o := range 37 {
+		chordNote := note
+		chordNote.Note = midicom.Note(int(note.Note-5) + o)
+		pat = pattern.Pattern{
+			Midicom: p,
+			Notes:   []pattern.Note{chordNote},
+			Channel: midicom.Channel(cycles.T6),
+			Meta: pattern.Meta{
+				Synth: pat.Synth,
+				Part:  "Intro Chord",
+			},
+		}
+
+		pat.Notes[0].Duration = pat.Notes[0].Duration + float64(o*10)
+		pat.Notes[0].CC = cycles.PT6()
+		pat.Notes[0].CC[cycles.SWEEP] = int8(o * 2)
+		pat.Notes[0].CC[cycles.CONTOUR] = int8(o * 2)
+		pat.Notes[0].CC[cycles.REVERB] = int8(o * 2)
+		pat.Notes[0].CC[cycles.COLOR] = int8(o * 2)
+		pat.Notes[0].CC[cycles.DECAY] = int8(o * 2)
+		pat.Notes[0].CC[cycles.DELAY] = int8(o)
+		pat.Notes[0].CC[cycles.REVERBSIZE] = int8(o * 2)
+		pat.Notes[0].CC[cycles.REVERBTONE] = int8(o * 2)
+		pat.Notes[0].CC[cycles.SHAPE] = int8(cycles.Unisonx2) + int8(o)
+
+		allVoices[0] = append(allVoices[0], pat)
+	}
+
+	// 	Print
+	pr := pattern.NewPrint(allVoices)
+	pr.Print(pattern.PatternPosition)
+
+	err = pattern.Play(allVoices)
+	if err != nil {
+		panic(err)
+	}
 }
