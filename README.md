@@ -1,10 +1,12 @@
-<img src="https://user-images.githubusercontent.com/22690219/130872109-150ac61f-ad69-4bfb-8f10-3337abcb6551.png" alt="drawing" width="350"/> <img src="https://i.imgur.com/pJbgSUh.png" alt="drawing" width="350"/>
-
 [![Go Reference](https://pkg.go.dev/badge/github.com/bh90210/models.svg)](https://pkg.go.dev/github.com/bh90210/models)
 
-# elektron:models
+# Models
 
-Go package to programmatically control [Elektron's](https://www.elektron.se/) **model:cycles** & **model:samples** via midi.
+Go package to programmatically control via midi:
+* Elektron model:cycles 
+* Elektron model:samples
+* Nord Lead x2
+* Dreadbox Nymphes
 
 ## Prerequisites
 
@@ -34,12 +36,7 @@ For more information see the [formulae page](https://formulae.brew.sh/formula/rt
 
 ## Quick Use
 
-_A complete example can be found in the [example](https://github.com/bh90210/elektronmodels/tree/master/example/) folder._
-
-_The relevant cycles/samples manuals' part for this library is the `APPENDIX A: MIDI SPECIFICATIONS`._
-
-<img src="https://i.imgur.com/Yrs6YS3.png" alt="drawing" width="350"/> <img src="https://i.imgur.com/cmil9NG.png" alt="drawing" width="350"/>
-
+_Complete examples can be found in the [examples](https://github.com/bh90210/elektronmodels/tree/master/examples/) folder._
 
 Code to get a single kick drum hit at C4 key, with velocity set at `120` and length at 200 milliseconds:
 ```go
@@ -60,4 +57,3 @@ func main() {
 }
 
 ```
-There are four Free methods to use, `Preset` to set preset on the fly, `Note` to fire a note on/off for given duration, `CC` to send a single control change message && `PC` for program changes. 
