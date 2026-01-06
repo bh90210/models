@@ -19,6 +19,121 @@ const (
 	Channel midicom.Channel = 0
 )
 
+type Parameter midicom.Parameter
+
+const (
+	ModWheel Parameter = 1
+)
+
+const (
+	LPFDepth        Parameter = 3
+	Tracking        Parameter = 4
+	Glide           Parameter = 5
+	AMPLevel        Parameter = 7
+	LFOCuttOffDepth Parameter = 8
+)
+
+const (
+	OSCLevel Parameter = iota + 9
+	SubLebel
+	NoiseLevel
+	PulseWidth
+	LDOPitchDepth
+	EGPitchDepth
+	Detune
+	ChordSelector
+	PlayMode // Values from 0 to 5. Poly/Uni-A/Uni-B/Tru/DUO/MONO.
+)
+
+const (
+	LFO1Rate Parameter = iota + 18
+	LFO1Wave
+	LFO1Delay
+	LFO1Fade
+	LFO1Type    // Values from 0 to 3. BPM/Low/High/Track.
+	LFO1KeySync // On/Off, 1/0.
+	LFO2Rate
+	LFO2Wave
+	LFO2Delay
+	LFO2Fade
+	LFO2Type    // Values from 0 to 3. BPM/Low/High/Track.
+	LFO2KeySync // On/Off, 1/0.
+)
+
+const (
+	ModSourceSelector Parameter = iota + 30 // Values from 0 to 3. LFO 2,ModWheel, Velocity, Aftertouch.
+	// Targets:
+	ModSourceOSCWaveDepth
+	ModSourceOSCLevelDepth
+	ModSourceSubLevelDepth
+	ModSourceNoiseLevelDepth
+	ModSourceLFOPitchDepthDepth
+	ModSourcePulseWidthDepth
+	ModSourceGlideDepth
+)
+
+const (
+	ModSourceDetuneDepth Parameter = iota + 39
+	ModSourceChordSelectorDepth
+	ModSourceEGPitchDepthDepth
+	ModSourceLPFCutoffDepth
+	ModSourceResonanceDepth
+	ModSourceLPFEGDepthDepth
+	ModSourceHPFCutoffDepth
+	ModSourceLPFTrackingDepth
+	ModSourceLPFCutoffLFODepthDepth
+	ModSourceFilterEGAttackDepth
+	ModSourceFilterEGDecayDepth
+	ModSourceFilterEGSustainDepth
+	ModSourceFilterEGReleaseDepth
+)
+
+const (
+	ModSourceFilterAMPAttackDepth Parameter = iota + 52
+	ModSourceFilterAMPDecayDepth
+	ModSourceFilterAMPSustainDepth
+	ModSourceFilterAMPReleaseDepth
+	ModSourceLFO1RateDepth
+	ModLFO1WaveDepth
+	ModSourceLFO1DelayDepth
+	ModSourceLFO1FadeDepth
+	ModSourceLFO2RateDepth
+	ModSourceLFO2WaveDepth
+	ModSourceLFO2DelayDepth
+	ModSourceLFO2FadeDepth
+)
+
+const (
+	ModSourceReverbSizeDepth Parameter = iota + 86
+	ModSourceReverbDecayDepth
+	ModSourceReverbFilterDepth
+	ModSourceReverbMixDepth
+)
+
+const (
+	SustainPedal Parameter = 64 // 0 = Off, 1= On.
+	Legato       Parameter = 68 // 0 = Off, 1= On.
+)
+
+const (
+	OSCWave Parameter = iota + 70
+	Resonance
+	AMPEGRelease
+	AMPEGAttack
+	LPFCutoff
+	ReverbSize
+	ReverbDecay
+	ReverbFilter
+	ReverbMix
+	FilterEGAttack
+	FilterEGDecay
+	HPFCutoff
+	FilterEGSustain
+	FilterEGRelease
+	AMPEGDecay
+	AMPEGSustain
+)
+
 var _ midicom.MidiCom = (*Project)(nil)
 
 type Project struct {
