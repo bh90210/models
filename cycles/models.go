@@ -251,7 +251,7 @@ const (
 	COLOR       midicom.Parameter = 16
 	SHAPE       midicom.Parameter = 17
 	PUNCH       midicom.Parameter = 66
-	GATE        midicom.Parameter = 67
+	GATE        midicom.Parameter = 67 // 0 off, 1 on.
 
 	// model:samples
 	PITCH        midicom.Parameter = 16

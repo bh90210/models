@@ -22,10 +22,23 @@ func main() {
 	}()
 
 	notes1 := []pattern.Note{
-		{Note: 50, Duration: 500, Velocity: 100, CC: baseNoteCC()},
-		{Note: 50 + midicom.Note(pattern.Major3rd), Duration: 500, Velocity: 100},
-		{Note: 50 + midicom.Note(pattern.Perfect5th), Duration: 500, Velocity: 100},
-		{Note: 50 + midicom.Note(pattern.Major7th), Duration: 500, Velocity: 100},
+		{Note: 50,
+			Duration: 500,
+			Velocity: 100,
+			CC:       baseNoteCC(),
+		},
+		{Note: 50 + midicom.Note(pattern.Major3rd),
+			Duration: 500,
+			Velocity: 100,
+		},
+		{Note: 50 + midicom.Note(pattern.Perfect5th),
+			Duration: 500,
+			Velocity: 100,
+		},
+		{Note: 50 + midicom.Note(pattern.Major7th),
+			Duration: 500,
+			Velocity: 100,
+		},
 	}
 
 	pat1 := pattern.Pattern{
@@ -42,8 +55,7 @@ func main() {
 
 	allVoices := make(map[int][]pattern.Pattern)
 
-	allVoices[0] = []pattern.Pattern{pat1}
-	allVoices[1] = []pattern.Pattern{pat2}
+	allVoices[0] = []pattern.Pattern{pat1, pat2}
 
 	p := pattern.NewPrint(allVoices)
 	p.Print(pattern.Voice)
@@ -65,7 +77,7 @@ func baseNoteCC() map[midicom.Parameter]int8 {
 	cc[midicom.Parameter(nymphes.EGPitchDepth)] = 40
 	cc[midicom.Parameter(nymphes.Detune)] = 20
 	cc[midicom.Parameter(nymphes.ChordSelector)] = 10
-	cc[midicom.Parameter(nymphes.PlayMode)] = 2 // Uni-B
+	cc[midicom.Parameter(nymphes.PlayMode)] = 1 // Uni-A
 
 	cc[midicom.Parameter(nymphes.LFO1Rate)] = 80
 	cc[midicom.Parameter(nymphes.LFO1Wave)] = 2
